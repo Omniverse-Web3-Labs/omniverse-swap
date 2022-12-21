@@ -68,23 +68,19 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		ClaimCreated(T::AccountId, Vec::<u8>),
-		ClaimRevoked(T::AccountId, Vec::<u8>),
-		ClaimTransferred(T::AccountId, T::AccountId, Vec::<u8>),
+		TokenCreated(T::AccountId, String),
+		TransactionSent(String, Vec::<u8>),
+		MembersSet(String, Vec::<u8>),
 	}
 
     // Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Error names should be descriptive.
-		ClaimAlreadyExist,
+		TokenAlreadyExist,
 		/// Errors should have helpful documentation associated with them.
-		ClaimNotExist,
-		/// There have be doc.
-		OnlyOwnerCanRevoke,
-		NotAbleToTransferToSelf,
-		OnlyOwnerCanTransfer,
-		ClaimLengthError,
+		TokenNotExist,
+		NotOwner,
 	}
 
     #[pallet::hooks]
@@ -98,63 +94,56 @@ pub mod pallet {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(0)]
-		pub fn create_claim(origin: OriginFor<T>, claim: Vec<u8>) -> DispatchResult {
+		pub fn create_token(origin: OriginFor<T>, token_id: String, members: Option<Vec<u8>>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			ensure!(claim.len() == 8, Error::<T>::ClaimLengthError);
-
-            // Check if the claim exists.
-            ensure!(!Proofs::<T>::contains_key(&claim), Error::<T>::ClaimAlreadyExist);
+			// Check if the token exists
+			ensure!(!Tokens::<T>::contains_key(&token_id), Error::<T>::TokenAlreadyExist);
 
 			// Update storage.
-			<Proofs<T>>::insert(
-                &claim,
-                (sender.clone(), frame_system::Pallet::<T>::block_number())
+			<Tokens<T>>::insert(
+                &token_id,
+                OmniverseToken::new(sender, token_id, members)
             );
 
 			// Emit an event.
-			Self::deposit_event(Event::ClaimCreated(sender, claim));
+			Self::deposit_event(Event::TokenCreated(sender, token_id));
 			// Return a successful DispatchResultWithPostInfo
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
-		pub fn revoke_claim(origin: OriginFor<T>, claim: Vec<u8>) -> DispatchResult {
+		pub fn send_transaction(origin: OriginFor<T>, token_id: String, data: Vec<u8>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-            // Check if the claim exists.
-            let (owner, _) = Proofs::<T>::get(&claim).ok_or(Error::<T>::ClaimNotExist)?;
+            // Check if the token exists.
+            let token = Tokens::<T>::get(&token_id).ok_or(Error::<T>::TokenNotExist)?;
 
-            ensure!(owner == sender, Error::<T>::OnlyOwnerCanRevoke);
+            token.handle_transaction(data);
 
             // Update storage
-            Proofs::<T>::remove(&claim);
+			Tokens::<T>::insert(&token_id, token);
 
-            Self::deposit_event(Event::ClaimRevoked(owner, claim));
+            Self::deposit_event(Event::TransactionSent(token_id, data.from));
 
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
-		pub fn transfer_claim(origin: OriginFor<T>, receiver: T::AccountId, claim: Vec<u8>) -> DispatchResult {
+		pub fn set_members(origin: OriginFor<T>, token_id: String, members: Vec<Vec<u8>>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			// Can not transfer the claim to self.
-            ensure!(sender != receiver, Error::<T>::NotAbleToTransferToSelf);
+            // Check if the token exists.
+            let token = Tokens::<T>::get(&token_id).ok_or(Error::<T>::TokenNotExist)?;
 
-            // Check if the claim exists.
-            let (owner, _) = Proofs::<T>::get(&claim).ok_or(Error::<T>::ClaimNotExist)?;
+            ensure!(token.owner == sender, Error::<T>::NotOwner);
 
-            ensure!(owner == sender, Error::<T>::OnlyOwnerCanTransfer);
+			token.set_members(members);
 
             // Update storage
-            Proofs::<T>::remove(&claim);
-			<Proofs<T>>::insert(
-                &claim,
-                (receiver.clone(), frame_system::Pallet::<T>::block_number())
-            );
+			Tokens::<T>::insert(&token_id, token);
 
-            Self::deposit_event(Event::ClaimTransferred(owner, receiver, claim));
+            Self::deposit_event(Event::MembersSet(token_id, members));
 
 			Ok(())
 		}
@@ -164,8 +153,19 @@ pub mod pallet {
 pub struct OmniverseToken {
 	owner: Vec<u8>,
 	token_id: String,
-	members: Vec<String>,
+	members: Vec<u8>,
 	omniverse_balances: HashMap<Vec<u8>, u128>;
+}
+
+impl OmniverseToken {
+	fn new(owner: Vec<u8>, token_id: String, members: Option<Vec<u8>>) -> Self {
+		Self {
+			owner,
+			token_id,
+			members: members.unwrap_or(Vec<u8>::new()),
+			omniverse_balances: HashMap<Vec<u8>, u128>::new
+		}
+	}
 }
 
 impl<T: Config> OmniverseToken {
