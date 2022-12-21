@@ -8,18 +8,45 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use parity_scale_codec::{Encode, Decode};
+
+#[derive(Decode, Encode)]
+pub struct TokenOpcode {
+	op: u8,
+	data: Vec<u8>
+}
+
+#[derive(Decode, Encode)]
+pub struct MintTokenOp {
+	to: Vec<u8>,
+	amount: u128
+}
+
+#[derive(Decode, Encode)]
+pub struct TransferTokenOp {
+	to: Vec<u8>,
+	amount: u128
+}
 
 #[frame_support::pallet]
-pub mod pallet {    
+pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
+	use parity_scale_codec::{Encode, Decode};
+	use omniverse_protocol::{OmniverseTokenProtocol, OmniverseAccounts};
+
+	const DEPOSIT = 0_u8;
+	const TRANSFER = 1_u8;
+	const WITHDRAW = 2_u8;
+	const MINT = 3_u8;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type OmniverseProtocol: OmniverseAccounts;
 	}
 
     #[pallet::pallet]
@@ -29,10 +56,10 @@ pub mod pallet {
     // The pallet's runtime storage items.
 	// https://docs.substrate.io/v3/runtime/storage
 	#[pallet::storage]
-	#[pallet::getter(fn proofs)]
+	#[pallet::getter(fn tokens)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type Proofs<T:Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber)>;
+	pub type Tokens<T:Config> = StorageMap<_, Blake2_128Concat, String, OmniverseToken>;
 
     // Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -131,5 +158,68 @@ pub mod pallet {
 
 			Ok(())
 		}
+	}
+}
+
+pub struct OmniverseToken {
+	owner: Vec<u8>,
+	token_id: String,
+	members: Vec<String>,
+	omniverse_balances: HashMap<Vec<u8>, u128>;
+}
+
+impl<T: Config> OmniverseToken {
+	fn handle_transaction(&mut self, data: OmniverseTokenProtocol) {
+		// Check if the tx destination is correct
+		assert!(data.to == OmniverseProtocol::<T>::get_chain_id(),
+		"Wrong destination");
+
+		// Check if the sender is honest
+		assert!(!OmniverseProtocol::<T>::is_malicious(data.from), "User is malicious");
+
+		// Verify the signature
+		let ret = OmniverseProtocol::<T>::verify_transaction(data);
+		assert!(ret.is_ok());
+
+		// Execute
+		let op_data = TokenOpcode::decode(data.data);
+		if op_data.op == DEPOSIT {
+
+		}
+		else op == TRANSFER {
+			let transfer_data = TransferTokenOp::decode(op_data.data);
+			self.omniverse_transfer(transfer_data.to, transfer_data.amount);
+		}
+		else op == WITHDRAW {
+
+		}
+		else op == MINT {
+			let mint_data = TransferTokenOp::decode(op_data.data);
+			self.omniverse_mint(mint_data.to, mint_data.amount);
+		}
+	}
+
+	fn omniverse_transfer(&mut self, to: Vec<u8>, amount: u128) {
+
+	}
+
+	fn omniverse_mint(&mut self, to: Vec<u8>, amount: u128) {
+
+	}
+
+	fn omniverse_balance_of(&self, user: Vec<u8>) -> u128 {
+		self.omniverse_balances.get(&user).unwrap_or(0);
+	}
+
+	fn add_members(&mut self, members: Vec<String>) {
+		for m in &members {
+			if !self.members.contains(m) {
+				self.members.push(m)
+			}
+		}
+	}
+
+	fn get_members(&self) -> Vec<String> {
+		self.members
 	}
 }
