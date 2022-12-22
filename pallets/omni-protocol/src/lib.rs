@@ -63,6 +63,10 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+	}
+
 	const CHAIN_ID: u8 = 0_u8;
 	
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
@@ -73,6 +77,27 @@ pub mod pallet {
 		to: Vec<u8>,
 		data: Vec<u8>,
 		signature: [u8; 65]
+	}
+
+	impl OmniverseTokenProtocol {
+		pub fn new(nonce: u128, chain_id: u8, from: [u8; 64], to: Vec<u8>, data: Vec<u8>) -> Self {
+			Self {
+				nonce,
+				chain_id,
+				from,
+				to,
+				data,
+				signature: [0; 65]
+			}
+		}
+
+		pub fn get_raw_hash(&self) -> [u8; 32] {
+			get_transaction_hash(self)
+		}
+
+		pub fn set_signature(&mut self, signature: [u8; 65]) {
+			self.signature = signature;
+		}
 	}
 	
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
@@ -120,7 +145,7 @@ pub mod pallet {
 	}
 
 	pub trait OmniverseAccounts {
-		fn verify_transaction(data: OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError>;
+		fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError>;
 		fn get_transaction_count(pk: [u8; 64]) -> u128;
 		fn is_malicious(pk: [u8; 64]) -> bool;
 		fn get_chain_id() -> u8;
@@ -140,7 +165,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> OmniverseAccounts for Pallet<T> {
-		fn verify_transaction(data: OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+		fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
 			let mut tr = TransactionRecorder::<T>::get(&data.from).unwrap_or(Vec::<OmniverseTx>::default());
 			let nonce = tr.len() as u128;
 	
