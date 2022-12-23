@@ -1,4 +1,5 @@
-use crate::{mock::*, Error, OmniverseAccounts, OmniverseTokenProtocol, VerifyError, VerifyResult};
+use crate::{mock::*, Error};
+use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError, get_transaction_hash};
 use frame_support::{assert_noop, assert_ok, assert_err};
 use sha3::{Digest, Keccak256};
 use secp256k1::rand::rngs::OsRng;

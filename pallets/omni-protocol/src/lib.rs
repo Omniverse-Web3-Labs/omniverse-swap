@@ -14,13 +14,8 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
-	use sp_core::{Hasher};
 	use sp_io::crypto;
-	use sp_runtime::{
-		traits::{
-			Keccak256
-		}
-	};
+	use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError, get_transaction_hash};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -70,37 +65,6 @@ pub mod pallet {
 	const CHAIN_ID: u8 = 0_u8;
 	
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
-	pub struct OmniverseTokenProtocol {
-		nonce: u128,
-		chain_id: u8,
-		from: [u8; 64],
-		to: Vec<u8>,
-		data: Vec<u8>,
-		signature: [u8; 65]
-	}
-
-	impl OmniverseTokenProtocol {
-		pub fn new(nonce: u128, chain_id: u8, from: [u8; 64], to: Vec<u8>, data: Vec<u8>) -> Self {
-			Self {
-				nonce,
-				chain_id,
-				from,
-				to,
-				data,
-				signature: [0; 65]
-			}
-		}
-
-		pub fn get_raw_hash(&self) -> [u8; 32] {
-			get_transaction_hash(self)
-		}
-
-		pub fn set_signature(&mut self, signature: [u8; 65]) {
-			self.signature = signature;
-		}
-	}
-	
-	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 	pub struct OmniverseTx {
 		tx_data: OmniverseTokenProtocol,
 		timestamp: u128
@@ -128,40 +92,6 @@ pub mod pallet {
 				his_nonce: nonce
 			}
 		}
-	}
-	
-	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
-	pub enum VerifyResult {
-		Success,
-		Malicious,
-		Duplicated
-	}
-	
-	#[derive(Clone, PartialEq, Eq, Debug)]
-	pub enum VerifyError {
-		SignatureError,
-		NonceError,
-		SignerNotCaller,
-	}
-
-	pub trait OmniverseAccounts {
-		fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError>;
-		fn get_transaction_count(pk: [u8; 64]) -> u128;
-		fn is_malicious(pk: [u8; 64]) -> bool;
-		fn get_chain_id() -> u8;
-	}
-
-	fn get_transaction_hash(data: &OmniverseTokenProtocol) -> [u8; 32] {
-		let mut raw = Vec::<u8>::new();
-		raw.extend_from_slice(&mut u128::to_be_bytes(data.nonce).as_slice());
-		raw.extend_from_slice(&mut u8::to_be_bytes(data.chain_id).as_slice());
-		raw.extend_from_slice(&mut data.from.clone());
-		raw.append(&mut data.to.clone().as_mut());
-		raw.append(&mut data.data.clone());
-	
-		let h = Keccak256::hash(raw.as_slice());
-		
-		h.0
 	}
 
 	impl<T: Config> OmniverseAccounts for Pallet<T> {
