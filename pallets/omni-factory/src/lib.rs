@@ -15,6 +15,7 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
 	use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol};
+	use omniverse_token_traits::{OmniverseTokenFactoryHandler};
 
 	const DEPOSIT: u8 = 0_u8;
 	const TRANSFER: u8 = 1_u8;
@@ -90,7 +91,7 @@ pub mod pallet {
 			// Update storage.
 			TokensInfo::<T>::insert(
                 &token_id,
-                OmniverseToken::new(sender, token_id, members)
+                OmniverseToken::new(sender.clone(), token_id.clone(), members)
             );
 
 			// Emit an event.
@@ -104,9 +105,9 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
             // Check if the token exists.
-            let token = TokensInfo::<T>::get(&token_id).ok_or(Error::<T>::TokenNotExist)?;
+            let mut token = TokensInfo::<T>::get(&token_id).ok_or(Error::<T>::TokenNotExist)?;
 
-            token.handle_transaction(&data);
+            token.handle_transaction::<T>(&data);
 
             Self::deposit_event(Event::TransactionSent(token_id, data.from));
 
@@ -118,11 +119,11 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
             // Check if the token exists.
-            let mut token: OmniverseToken<T> = TokensInfo::<T>::get(&token_id).ok_or(Error::<T>::TokenNotExist)?;
+            let mut token = TokensInfo::<T>::get(&token_id).ok_or(Error::<T>::TokenNotExist)?;
 
             ensure!(token.owner == sender, Error::<T>::NotOwner);
 
-			token.add_members(members);
+			token.add_members(members.clone());
 
             // Update storage
 			TokensInfo::<T>::insert(&token_id, token);
@@ -157,8 +158,8 @@ pub mod pallet {
 		token_id: Vec<u8>,
 		members: Vec<u8>
 	}
-	
-	impl<T: Config, AccountId: Parameter + Member> OmniverseToken<AccountId> {
+
+	impl<AccountId> OmniverseToken<AccountId> {		
 		fn new(owner: AccountId, token_id: Vec<u8>, members: Option<Vec<u8>>) -> Self {
 			Self {
 				owner,
@@ -166,8 +167,8 @@ pub mod pallet {
 				members: members.unwrap_or(Vec::<u8>::new())
 			}
 		}
-
-		fn handle_transaction(&mut self, data: &OmniverseTokenProtocol) {
+		
+		fn handle_transaction<T: Config>(&mut self, data: &OmniverseTokenProtocol) {
 			// Check if the tx destination is correct
 			assert!(data.to == self.token_id,
 			"Wrong destination");
@@ -214,7 +215,20 @@ pub mod pallet {
 		}
 	
 		fn get_members(&self) -> Vec<u8> {
-			self.members
+			self.members.clone()
+		}
+	}
+
+	pub struct OmniverseTokenFactory<T>(T);
+
+	impl<T: Config> OmniverseTokenFactoryHandler for OmniverseTokenFactory<T> {
+		fn send_transaction(&mut self, token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<(), ()> {
+			// Check if the token exists.
+            let mut token = TokensInfo::<T>::get(&token_id).ok_or(())?;
+
+            token.handle_transaction::<T>(&data);
+
+			Ok(())
 		}
 	}
 }
