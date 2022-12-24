@@ -1,7 +1,7 @@
-use crate::{mock::*, Error, TokenOpcode, TransferTokenOp, MintTokenOp, TRANSFER, MINT};
+use crate::{mock::*, Error, TRANSFER, MINT};
 use frame_support::{assert_noop, assert_ok, assert_err};
 use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError, get_transaction_hash};
-use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError};
+use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError, TokenOpcode, TransferTokenOp, MintTokenOp};
 use sha3::{Digest, Keccak256};
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{Secp256k1, Message, ecdsa::RecoverableSignature, SecretKey, PublicKey};

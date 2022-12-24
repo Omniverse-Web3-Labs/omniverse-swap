@@ -15,7 +15,7 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
 	use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol};
-	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError};
+	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError, TransferTokenOp, MintTokenOp, TokenOpcode};
 
 	pub const DEPOSIT: u8 = 0_u8;
 	pub const TRANSFER: u8 = 1_u8;
@@ -142,51 +142,6 @@ pub mod pallet {
 		}
 	}
 
-	#[derive(Decode, Encode)]
-	pub struct TokenOpcode {
-		pub op: u8,
-		pub data: Vec<u8>
-	}
-
-	impl TokenOpcode {
-		pub fn new(op: u8, data: Vec<u8>) -> Self {
-			Self {
-				op,
-				data,
-			}
-		}
-	}
-
-	#[derive(Decode, Encode)]
-	pub struct MintTokenOp {
-		pub to: [u8; 64],
-		pub amount: u128
-	}
-
-	impl MintTokenOp {
-		pub fn new(to: [u8; 64], amount: u128) -> Self {
-			Self {
-				to,
-				amount,
-			}
-		}
-	}
-
-	#[derive(Decode, Encode)]
-	pub struct TransferTokenOp {
-		pub to: [u8; 64],
-		pub amount: u128
-	}
-
-	impl TransferTokenOp {
-		pub fn new(to: [u8; 64], amount: u128) -> Self {
-			Self {
-				to,
-				amount,
-			}
-		}
-	}
-
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 	pub struct OmniverseToken<AccountId> {
 		owner: AccountId,
@@ -235,7 +190,7 @@ pub mod pallet {
 	
 			}
 			else if op_data.op == MINT {
-				let mint_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+				let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
 				if data.from != self.owner_pk {
 					return Err(FactoryError::SignerNotOwner);
 				}
