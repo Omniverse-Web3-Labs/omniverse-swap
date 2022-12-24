@@ -24,6 +24,11 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
 
+	#[pallet::type_value]
+	pub fn GetDefaultValue() -> u128 {
+		0
+	}
+
     #[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -36,6 +41,12 @@ pub mod pallet {
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub type TransactionRecorder<T:Config> = StorageMap<_, Blake2_128Concat, [u8; 64], Vec<OmniverseTx>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn transaction_count)]
+	// Learn more about declaring storage items:
+	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
+	pub type TransactionCount<T:Config> = StorageMap<_, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn evil_recorder)]
@@ -113,6 +124,7 @@ pub mod pallet {
 				let omni_tx = OmniverseTx::new(data.clone());
 				tr.push(omni_tx);
 				TransactionRecorder::<T>::insert(&data.from, tr);
+				TransactionCount::<T>::insert(&data.from, nonce);
 				Ok(VerifyResult::Success)
 			}
 			else if nonce > data.nonce {

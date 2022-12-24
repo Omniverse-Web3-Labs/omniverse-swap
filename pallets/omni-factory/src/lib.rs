@@ -30,6 +30,11 @@ pub mod pallet {
 		type OmniverseProtocol: OmniverseAccounts;
 	}
 
+	#[pallet::type_value]
+	pub fn GetDefaultValue() -> u128 {
+		0
+	}
+
     #[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -47,7 +52,7 @@ pub mod pallet {
 	#[pallet::getter(fn tokens)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type Tokens<T:Config> = StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, [u8; 64], u128>;
+	pub type Tokens<T:Config> = StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
 
     // Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
