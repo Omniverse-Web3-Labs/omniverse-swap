@@ -1,4 +1,4 @@
-use crate as pallet_poe;
+use crate as pallet_omniverse_factory;
 use frame_support::parameter_types;
 use frame_system as system;
 use sp_core::H256;
@@ -6,6 +6,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -18,7 +19,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		PoeModule: pallet_poe::{Pallet, Call, Storage, Event<T>},
+		OmniverseFactory: pallet_omniverse_factory::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -32,8 +33,8 @@ impl system::Config for Test {
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -41,7 +42,7 @@ impl system::Config for Test {
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
@@ -51,10 +52,37 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_poe::Config for Test {
-	type Event = Event;
+#[derive(Default)]
+pub struct OmniverseProtocol();
+
+impl OmniverseAccounts for OmniverseProtocol {
+	fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+		if data.signature == [0; 65] {
+			return Err(VerifyError::SignatureError);
+		}
+
+		Ok(VerifyResult::Success)
+	}
+
+    fn get_transaction_count(pk: [u8; 64]) -> u128 {
+		0
+	}
+
+    fn is_malicious(pk: [u8; 64]) -> bool {
+		false
+	}
+
+    fn get_chain_id() -> u8 {
+		1
+	}
+}
+
+impl pallet_omniverse_factory::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
+	type OmniverseProtocol = OmniverseProtocol;
 }
 
 // Build genesis storage according to the mock runtime.

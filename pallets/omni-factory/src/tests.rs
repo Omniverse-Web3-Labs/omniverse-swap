@@ -1,96 +1,239 @@
-use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok};
+use crate::{mock::*, Error, TokenOpcode, TransferTokenOp, MintTokenOp, TRANSFER, MINT};
+use frame_support::{assert_noop, assert_ok, assert_err};
+use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError, get_transaction_hash};
+use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError};
+use sha3::{Digest, Keccak256};
+use secp256k1::rand::rngs::OsRng;
+use secp256k1::{Secp256k1, Message, ecdsa::RecoverableSignature, SecretKey, PublicKey};
+use codec::{Encode, Decode};
+
+const CHAIN_ID: u8 = 1;
+const TOKEN_ID: Vec<u8> = Vec::<u8>::new();
+
+fn get_sig_slice(sig: &RecoverableSignature) -> [u8; 65] {
+    let (recovery_id, sig_slice) = sig.serialize_compact();
+    let mut sig_recovery: [u8; 65] = [0; 65];
+    sig_recovery[0..64].copy_from_slice(&sig_slice);
+    sig_recovery[64] = recovery_id.to_i32() as u8;
+    sig_recovery
+}
+
+fn encode_transfer(secp: &Secp256k1<secp256k1::All>, from: (SecretKey, PublicKey),
+    to: PublicKey, amount: u128, nonce: u128) -> OmniverseTokenProtocol {
+    let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
+    let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
+    let transfer_data = TransferTokenOp::new(pk_to, amount).encode();
+    let data = TokenOpcode::new(TRANSFER, transfer_data).encode();
+    let mut tx_data = OmniverseTokenProtocol::new(nonce, CHAIN_ID, pk_from, TOKEN_ID, data);
+    let h = tx_data.get_raw_hash();
+    let message = Message::from_slice(h.as_slice()).expect("messages must be 32 bytes and are expected to be hashes");
+    let sig: RecoverableSignature = secp.sign_ecdsa_recoverable(&message, &from.0);
+    let sig_recovery = get_sig_slice(&sig);
+    tx_data.set_signature(sig_recovery);
+    tx_data
+}
+
+fn encode_mint(secp: &Secp256k1<secp256k1::All>, from: (SecretKey, PublicKey),
+    to: PublicKey, amount: u128, nonce: u128) -> OmniverseTokenProtocol {
+    let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
+    let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
+    let transfer_data = MintTokenOp::new(pk_to, amount).encode();
+    let data = TokenOpcode::new(MINT, transfer_data).encode();
+    let mut tx_data = OmniverseTokenProtocol::new(nonce, CHAIN_ID, pk_from, TOKEN_ID, data);
+    let h = tx_data.get_raw_hash();
+    let message = Message::from_slice(h.as_slice()).expect("messages must be 32 bytes and are expected to be hashes");
+    let sig: RecoverableSignature = secp.sign_ecdsa_recoverable(&message, &from.0);
+    let sig_recovery = get_sig_slice(&sig);
+    tx_data.set_signature(sig_recovery);
+    tx_data
+}
 
 #[test]
-fn it_works_for_create_claim() {
+fn it_works_for_create_token() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        // Dispatch a signed extrinsic.
-        assert_ok!(PoeModule::create_claim(Origin::signed(1), claim.clone()));
-        // Read pallet storage and assert an expected result.
-        assert!(PoeModule::proofs(claim.clone()).is_some());
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), [0; 64], vec![1], None));
+        assert!(OmniverseFactory::tokens_info(vec![1]).is_some());
     });
 }
 
 #[test]
-fn it_fails_for_create_claim_with_claim_length_error() {
+fn it_fails_for_create_token_with_token_already_exist() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3];
-        // Dispatch a signed extrinsic.
-        assert_noop!(PoeModule::create_claim(Origin::signed(1), claim), Error::<Test>::ClaimLengthError);
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), [0; 64], vec![1], None));
+        assert_err!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), [0; 64], vec![1], None), Error::<Test>::TokenAlreadyExist);
     });
 }
 
 #[test]
-fn it_fails_for_create_claim_with_claim_alreay_exist() {
+fn it_fails_for_set_members_with_token_not_exist() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        // Dispatch a signed extrinsic.
-        assert_ok!(PoeModule::create_claim(Origin::signed(1), claim.clone()));
-        assert_noop!(PoeModule::create_claim(Origin::signed(1), claim), Error::<Test>::ClaimAlreadyExist);
+        assert_err!(OmniverseFactory::set_members(RuntimeOrigin::signed(1), vec![1], vec![1]), Error::<Test>::TokenNotExist);
     });
 }
 
 #[test]
-fn it_fails_for_revoke_claim_with_claim_not_exist() {
+fn it_fails_for_set_members_with_not_owner() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        assert_noop!(PoeModule::revoke_claim(Origin::signed(1), claim), Error::<Test>::ClaimNotExist);
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), [0; 64], vec![1], None));
+        assert_err!(OmniverseFactory::set_members(RuntimeOrigin::signed(2), vec![1], vec![1]), Error::<Test>::NotOwner);
     });
 }
 
 #[test]
-fn it_fails_for_revoke_claim_with_not_owner() {
+fn it_works_for_set_members() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        // Dispatch a signed extrinsic.
-        assert_ok!(PoeModule::create_claim(Origin::signed(1), claim.clone()));
-        assert_noop!(PoeModule::revoke_claim(Origin::signed(2), claim), Error::<Test>::OnlyOwnerCanRevoke);
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), [0; 64], vec![1], None));
+        assert_ok!(OmniverseFactory::set_members(RuntimeOrigin::signed(1), vec![1], vec![1]));
+        let token_info = OmniverseFactory::tokens_info(vec![1]).unwrap();
+        assert!(token_info.members == vec![1]);
     });
 }
 
 #[test]
-fn it_works_for_revoke_claim() {
+fn it_fails_for_factory_handler_with_token_not_exist() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        // Dispatch a signed extrinsic.
-        assert_ok!(PoeModule::create_claim(Origin::signed(1), claim.clone()));
-        assert_ok!(PoeModule::revoke_claim(Origin::signed(1), claim));
+        let secp = Secp256k1::new();
+        // Generate key pair
+        let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+
+        // Get nonce
+        let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
+        let nonce = OmniverseProtocol::get_transaction_count(pk);
+
+        let data = encode_transfer(&secp, (secret_key, public_key), public_key, 1, nonce);
+        assert_err!(OmniverseFactory::send_transaction_external(vec![1], &data), FactoryError::TokenNotExist);
     });
 }
 
 #[test]
-fn it_fails_for_transfer_claim_with_transfer_to_self() {
+fn it_fails_for_factory_handler_with_wrong_destination() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        assert_noop!(PoeModule::transfer_claim(Origin::signed(1), 1, claim), Error::<Test>::NotAbleToTransferToSelf);
+        let secp = Secp256k1::new();
+        // Generate key pair
+        let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+
+        // Get nonce
+        let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
+        let nonce = OmniverseProtocol::get_transaction_count(pk);
+        
+        // Create token
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), pk, vec![1], None));
+
+        let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
+        let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
+        assert_err!(OmniverseFactory::send_transaction_external(vec![1], &data), FactoryError::WrongDestination);
     });
 }
 
 #[test]
-fn it_fails_for_transfer_claim_with_claim_not_exist() {
+fn it_fails_for_factory_handler_with_signature_error() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        assert_noop!(PoeModule::transfer_claim(Origin::signed(1), 2, claim), Error::<Test>::ClaimNotExist);
+        let secp = Secp256k1::new();
+        // Generate key pair
+        let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+
+        // Get nonce
+        let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
+        let nonce = OmniverseProtocol::get_transaction_count(pk);
+        
+        // Create token
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+
+        let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
+        let mut data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
+        data.signature = [0; 65];
+        assert_err!(OmniverseFactory::send_transaction_external(TOKEN_ID, &data), FactoryError::SignatureError);
     });
 }
 
 #[test]
-fn it_fails_for_transfer_claim_with_not_owner() {
+fn it_fails_for_factory_handler_mint_with_signer_not_owner() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        // Dispatch a signed extrinsic.
-        assert_ok!(PoeModule::create_claim(Origin::signed(1), claim.clone()));
-        assert_noop!(PoeModule::transfer_claim(Origin::signed(2), 1, claim), Error::<Test>::OnlyOwnerCanTransfer);
+        let secp = Secp256k1::new();
+        // Generate key pair
+        let (_, public_key) = secp.generate_keypair(&mut OsRng);
+
+        // Get nonce
+        let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
+        let nonce = OmniverseProtocol::get_transaction_count(pk);
+        
+        // Create token
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+
+        let (secret_key_to, public_key_to) = secp.generate_keypair(&mut OsRng);
+        let data = encode_mint(&secp, (secret_key_to, public_key_to), public_key_to, 1, nonce);
+        assert_err!(OmniverseFactory::send_transaction_external(TOKEN_ID, &data), FactoryError::SignerNotOwner);
     });
 }
 
 #[test]
-fn it_works_for_transfer_claim() {
+fn it_works_for_factory_handler_mint() {
     new_test_ext().execute_with(|| {
-        let claim = vec![1, 2, 3, 4, 5, 6, 7, 8];
-        // Dispatch a signed extrinsic.
-        assert_ok!(PoeModule::create_claim(Origin::signed(1), claim.clone()));
-        assert_ok!(PoeModule::transfer_claim(Origin::signed(1), 2, claim));
+        let secp = Secp256k1::new();
+        // Generate key pair
+        let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+
+        // Get nonce
+        let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
+        let nonce = OmniverseProtocol::get_transaction_count(pk);
+        
+        // Create token
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+
+        let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
+        let data = encode_mint(&secp, (secret_key, public_key), public_key_to, 1, nonce);
+        assert_ok!(OmniverseFactory::send_transaction_external(TOKEN_ID, &data));
+
+        let pk_to: [u8; 64] = public_key_to.serialize_uncompressed()[1..].try_into().expect("");
+        let token = OmniverseFactory::tokens(TOKEN_ID, pk_to).unwrap();
+        assert_eq!(token, 1);
+    });
+}
+
+#[test]
+fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
+    new_test_ext().execute_with(|| {
+        let secp = Secp256k1::new();
+        // Generate key pair
+        let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+
+        // Get nonce
+        let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
+        let nonce = OmniverseProtocol::get_transaction_count(pk);
+
+        // Create token
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+
+        let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
+        let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
+        assert_err!(OmniverseFactory::send_transaction_external(TOKEN_ID, &data), FactoryError::BalanceOverflow);
+    });
+}
+
+#[test]
+fn it_works_for_factory_handler_transfer() {
+    new_test_ext().execute_with(|| {
+        let secp = Secp256k1::new();
+        // Generate key pair
+        let (secret_key, public_key) = secp.generate_keypair(&mut OsRng);
+
+        // Get nonce
+        let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
+        let nonce = OmniverseProtocol::get_transaction_count(pk);
+
+        // Create token
+        assert_ok!(OmniverseFactory::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+
+        // Mint token
+        let mint_data = encode_mint(&secp, (secret_key, public_key), public_key, 10, nonce);
+        assert_ok!(OmniverseFactory::send_transaction_external(TOKEN_ID, &mint_data));
+
+        let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
+        let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
+        assert_ok!(OmniverseFactory::send_transaction_external(TOKEN_ID, &data));
+
+        assert_eq!(OmniverseFactory::tokens(TOKEN_ID, &pk).unwrap(), 9);
+        let pk_to: [u8; 64] = public_key_to.serialize_uncompressed()[1..].try_into().expect("");
+        assert_eq!(OmniverseFactory::tokens(TOKEN_ID, &pk_to).unwrap(), 1);
     });
 }

@@ -15,12 +15,12 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
 	use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol};
-	use omniverse_token_traits::{OmniverseTokenFactoryHandler};
+	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError};
 
-	const DEPOSIT: u8 = 0_u8;
-	const TRANSFER: u8 = 1_u8;
-	const WITHDRAW: u8 = 2_u8;
-	const MINT: u8 = 3_u8;
+	pub const DEPOSIT: u8 = 0_u8;
+	pub const TRANSFER: u8 = 1_u8;
+	pub const WITHDRAW: u8 = 2_u8;
+	pub const MINT: u8 = 3_u8;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -47,7 +47,7 @@ pub mod pallet {
 	#[pallet::getter(fn tokens)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type Tokens<T:Config> = StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, Vec<u8>, u128>;
+	pub type Tokens<T:Config> = StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, [u8; 64], u128>;
 
     // Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
@@ -82,7 +82,7 @@ pub mod pallet {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(0)]
-		pub fn create_token(origin: OriginFor<T>, token_id: Vec<u8>, members: Option<Vec<u8>>) -> DispatchResult {
+		pub fn create_token(origin: OriginFor<T>, owner_pk: [u8; 64], token_id: Vec<u8>, members: Option<Vec<u8>>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			// Check if the token exists
@@ -91,7 +91,7 @@ pub mod pallet {
 			// Update storage.
 			TokensInfo::<T>::insert(
                 &token_id,
-                OmniverseToken::new(sender.clone(), token_id.clone(), members)
+                OmniverseToken::new(sender.clone(), owner_pk, token_id.clone(), members)
             );
 
 			// Emit an event.
@@ -102,14 +102,9 @@ pub mod pallet {
 
 		#[pallet::weight(0)]
 		pub fn send_transaction(origin: OriginFor<T>, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 
-            // Check if the token exists.
-            let mut token = TokensInfo::<T>::get(&token_id).ok_or(Error::<T>::TokenNotExist)?;
-
-            token.handle_transaction::<T>(&data);
-
-            Self::deposit_event(Event::TransactionSent(token_id, data.from));
+			Self::send_transaction_external(token_id, &data).map_err(|_| Error::<T>::TokenNotExist)?;
 
 			Ok(())
 		}
@@ -134,51 +129,98 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> OmniverseTokenFactoryHandler for Pallet<T> {
+		fn send_transaction_external(token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<(), FactoryError> {
+			// Check if the token exists.
+            let mut token = TokensInfo::<T>::get(&token_id).ok_or(FactoryError::TokenNotExist)?;
+
+            token.handle_transaction::<T>(&data)?;
+
+            Self::deposit_event(Event::TransactionSent(token_id, data.from));
+
+			Ok(())
+		}
+	}
+
 	#[derive(Decode, Encode)]
 	pub struct TokenOpcode {
-		op: u8,
-		data: Vec<u8>
+		pub op: u8,
+		pub data: Vec<u8>
+	}
+
+	impl TokenOpcode {
+		pub fn new(op: u8, data: Vec<u8>) -> Self {
+			Self {
+				op,
+				data,
+			}
+		}
 	}
 
 	#[derive(Decode, Encode)]
 	pub struct MintTokenOp {
-		to: Vec<u8>,
-		amount: u128
+		pub to: [u8; 64],
+		pub amount: u128
+	}
+
+	impl MintTokenOp {
+		pub fn new(to: [u8; 64], amount: u128) -> Self {
+			Self {
+				to,
+				amount,
+			}
+		}
 	}
 
 	#[derive(Decode, Encode)]
 	pub struct TransferTokenOp {
-		to: Vec<u8>,
-		amount: u128
+		pub to: [u8; 64],
+		pub amount: u128
+	}
+
+	impl TransferTokenOp {
+		pub fn new(to: [u8; 64], amount: u128) -> Self {
+			Self {
+				to,
+				amount,
+			}
+		}
 	}
 
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 	pub struct OmniverseToken<AccountId> {
 		owner: AccountId,
+		owner_pk: [u8; 64],
 		token_id: Vec<u8>,
-		members: Vec<u8>
+		pub members: Vec<u8>
 	}
 
 	impl<AccountId> OmniverseToken<AccountId> {		
-		fn new(owner: AccountId, token_id: Vec<u8>, members: Option<Vec<u8>>) -> Self {
+		fn new(owner: AccountId, owner_pk: [u8; 64], token_id: Vec<u8>, members: Option<Vec<u8>>) -> Self {
 			Self {
 				owner,
+				owner_pk,
 				token_id,
 				members: members.unwrap_or(Vec::<u8>::new())
 			}
 		}
 		
-		fn handle_transaction<T: Config>(&mut self, data: &OmniverseTokenProtocol) {
+		fn handle_transaction<T: Config>(&mut self, data: &OmniverseTokenProtocol) -> Result<(), FactoryError> {
 			// Check if the tx destination is correct
-			assert!(data.to == self.token_id,
-			"Wrong destination");
+			if data.to != self.token_id {
+				return Err(FactoryError::WrongDestination);
+			}
 	
 			// Check if the sender is honest
-			assert!(!T::OmniverseProtocol::is_malicious(data.from), "User is malicious");
+			if T::OmniverseProtocol::is_malicious(data.from) {
+				return Err(FactoryError::UserIsMalicious);
+			}
 	
 			// Verify the signature
 			let ret = T::OmniverseProtocol::verify_transaction(&data);
-			assert!(ret.is_ok());
+			if !ret.is_ok() {
+				return Err(FactoryError::SignatureError);
+			}
 	
 			// Execute
 			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
@@ -187,23 +229,38 @@ pub mod pallet {
 			}
 			else if op_data.op == TRANSFER {
 				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				self.omniverse_transfer(transfer_data.to, transfer_data.amount);
+				self.omniverse_transfer::<T>(data.from, transfer_data.to, transfer_data.amount)?;
 			}
 			else if op_data.op == WITHDRAW {
 	
 			}
 			else if op_data.op == MINT {
 				let mint_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				self.omniverse_mint(mint_data.to, mint_data.amount);
+				if data.from != self.owner_pk {
+					return Err(FactoryError::SignerNotOwner);
+				}
+				self.omniverse_mint::<T>(mint_data.to, mint_data.amount);
 			}
+
+			Ok(())
 		}
 	
-		fn omniverse_transfer(&mut self, to: Vec<u8>, amount: u128) {
-	
+		fn omniverse_transfer<T: Config>(&mut self, from: [u8; 64], to: [u8; 64], amount: u128) -> Result<(), FactoryError> {
+			let from_balance = Tokens::<T>::get(&self.token_id, &from).unwrap_or(0);
+			if from_balance < amount {
+				return Err(FactoryError::BalanceOverflow);
+			}
+			else {
+				Tokens::<T>::insert(&self.token_id, &from, from_balance - amount);
+				let to_balance = Tokens::<T>::get(&self.token_id, &to).unwrap_or(0);
+				Tokens::<T>::insert(&self.token_id, &to, to_balance + amount);
+			}
+			Ok(())
 		}
 	
-		fn omniverse_mint(&mut self, to: Vec<u8>, amount: u128) {
-	
+		fn omniverse_mint<T: Config>(&mut self, to: [u8; 64], amount: u128) {
+			let balance = Tokens::<T>::get(&self.token_id, &to).unwrap_or(0);
+			Tokens::<T>::insert(&self.token_id, &to, balance + amount);
 		}
 	
 		fn add_members(&mut self, members: Vec<u8>) {
@@ -212,23 +269,6 @@ pub mod pallet {
 					self.members.push(*m)
 				}
 			}
-		}
-	
-		fn get_members(&self) -> Vec<u8> {
-			self.members.clone()
-		}
-	}
-
-	pub struct OmniverseTokenFactory<T>(T);
-
-	impl<T: Config> OmniverseTokenFactoryHandler for OmniverseTokenFactory<T> {
-		fn send_transaction(&mut self, token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<(), ()> {
-			// Check if the token exists.
-            let mut token = TokensInfo::<T>::get(&token_id).ok_or(())?;
-
-            token.handle_transaction::<T>(&data);
-
-			Ok(())
 		}
 	}
 }
