@@ -300,7 +300,7 @@ impl pallet_omniverse_factory::Config for Runtime {
 /// Configure the pallet-omniverse-swap in pallets/omni-swap.
 impl pallet_omniverse_swap::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OmniverseToken = OmniverseSwap;
+	type OmniverseToken = OmniverseFactory;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
