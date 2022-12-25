@@ -9,6 +9,8 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError};
+use omniverse_protocol_traits::OmniverseTokenProtocol;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -18,7 +20,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		TemplateModule: omni_swap,
+		OmniSwap: omni_swap,
 	}
 );
 
@@ -47,10 +49,22 @@ impl system::Config for Test {
 	type SS58Prefix = ConstU16<42>;
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	// type OmniverseToken = OmniverseTokenFactoryHandler;
+}
+
+#[derive(Default)]
+pub struct OmniverseToken();
+
+impl OmniverseTokenFactoryHandler for OmniverseToken {
+	fn send_transaction_external(_token_id: Vec<u8>, _data: &OmniverseTokenProtocol) -> Result<(), FactoryError> {
+		Ok(())
+	}
 }
 
 impl omni_swap::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+	// type OmniverseToken = Type;
+	type OmniverseToken = OmniverseToken;
 }
 
 // Build genesis storage according to the mock runtime.
