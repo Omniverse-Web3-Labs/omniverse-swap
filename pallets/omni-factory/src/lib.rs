@@ -14,8 +14,8 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
-	use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol};
-	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError, TransferTokenOp, MintTokenOp, TokenOpcode};
+	use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol};
+	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryResult, FactoryError, TransferTokenOp, MintTokenOp, TokenOpcode};
 
 	pub const DEPOSIT: u8 = 0_u8;
 	pub const TRANSFER: u8 = 1_u8;
@@ -135,7 +135,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> OmniverseTokenFactoryHandler for Pallet<T> {
-		fn send_transaction_external(token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<(), FactoryError> {
+		fn send_transaction_external(token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, FactoryError> {
 			// Check if the token exists.
             let mut token = TokensInfo::<T>::get(&token_id).ok_or(FactoryError::TokenNotExist)?;
 
@@ -143,7 +143,7 @@ pub mod pallet {
 
             Self::deposit_event(Event::TransactionSent(token_id, data.from));
 
-			Ok(())
+			Ok(FactoryResult::Success)
 		}
 	}
 
@@ -165,7 +165,7 @@ pub mod pallet {
 			}
 		}
 		
-		fn handle_transaction<T: Config>(&mut self, data: &OmniverseTokenProtocol) -> Result<(), FactoryError> {
+		fn handle_transaction<T: Config>(&mut self, data: &OmniverseTokenProtocol) -> Result<FactoryResult, FactoryError> {
 			// Check if the tx destination is correct
 			if data.to != self.token_id {
 				return Err(FactoryError::WrongDestination);
@@ -178,8 +178,13 @@ pub mod pallet {
 	
 			// Verify the signature
 			let ret = T::OmniverseProtocol::verify_transaction(&data);
-			if !ret.is_ok() {
-				return Err(FactoryError::SignatureError);
+			match ret {
+				Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
+				Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
+				Err(VerifyError::SignatureError) => return Err(FactoryError::ProtocolSignatureError),
+				Err(VerifyError::SignerNotCaller) => return Err(FactoryError::ProtocolSignerNotCaller),
+				Err(VerifyError::NonceError) => return Err(FactoryError::ProtocolNonceError),
+				_ => (),
 			}
 	
 			// Execute
@@ -202,24 +207,24 @@ pub mod pallet {
 				self.omniverse_mint::<T>(mint_data.to, mint_data.amount);
 			}
 
-			Ok(())
+			Ok(FactoryResult::Success)
 		}
 	
 		fn omniverse_transfer<T: Config>(&mut self, from: [u8; 64], to: [u8; 64], amount: u128) -> Result<(), FactoryError> {
-			let from_balance = Tokens::<T>::get(&self.token_id, &from).unwrap_or(0);
+			let from_balance = Tokens::<T>::get(&self.token_id, &from);
 			if from_balance < amount {
 				return Err(FactoryError::BalanceOverflow);
 			}
 			else {
 				Tokens::<T>::insert(&self.token_id, &from, from_balance - amount);
-				let to_balance = Tokens::<T>::get(&self.token_id, &to).unwrap_or(0);
+				let to_balance = Tokens::<T>::get(&self.token_id, &to);
 				Tokens::<T>::insert(&self.token_id, &to, to_balance + amount);
 			}
 			Ok(())
 		}
 	
 		fn omniverse_mint<T: Config>(&mut self, to: [u8; 64], amount: u128) {
-			let balance = Tokens::<T>::get(&self.token_id, &to).unwrap_or(0);
+			let balance = Tokens::<T>::get(&self.token_id, &to);
 			Tokens::<T>::insert(&self.token_id, &to, balance + amount);
 		}
 	

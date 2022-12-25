@@ -6,7 +6,7 @@ use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol};
 use sp_std::vec::Vec;
 use codec::{Encode, Decode};
 
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Debug)]
 pub struct TokenOpcode {
     pub op: u8,
     pub data: Vec<u8>
@@ -21,7 +21,7 @@ impl TokenOpcode {
     }
 }
 
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Debug)]
 pub struct MintTokenOp {
     pub to: [u8; 64],
     pub amount: u128
@@ -36,7 +36,7 @@ impl MintTokenOp {
     }
 }
 
-#[derive(Decode, Encode)]
+#[derive(Decode, Encode, Debug)]
 pub struct TransferTokenOp {
     pub to: [u8; 64],
     pub amount: u128
@@ -52,15 +52,24 @@ impl TransferTokenOp {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum FactoryResult {
+    Success,
+    ProtocolMalicious,
+    ProtocolDuplicated,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum FactoryError {
     TokenNotExist,
     WrongDestination,
     UserIsMalicious,
-    SignatureError,
     BalanceOverflow,
     SignerNotOwner,
+    ProtocolSignerNotCaller,
+    ProtocolSignatureError,
+    ProtocolNonceError,
 }
 
 pub trait OmniverseTokenFactoryHandler {
-    fn send_transaction_external(token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<(), FactoryError>;
+    fn send_transaction_external(token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, FactoryError>;
 }

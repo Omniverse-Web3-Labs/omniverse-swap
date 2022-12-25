@@ -124,7 +124,7 @@ pub mod pallet {
 				let omni_tx = OmniverseTx::new(data.clone());
 				tr.push(omni_tx);
 				TransactionRecorder::<T>::insert(&data.from, tr);
-				TransactionCount::<T>::insert(&data.from, nonce);
+				TransactionCount::<T>::insert(&data.from, nonce + 1);
 				Ok(VerifyResult::Success)
 			}
 			else if nonce > data.nonce {
