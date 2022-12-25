@@ -54,6 +54,8 @@ pub use pallet_omniverse_protocol;
 /// Import the omniverse factory pallet.
 pub use pallet_omniverse_factory;
 
+pub use pallet_omniverse_swap;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -295,6 +297,12 @@ impl pallet_omniverse_factory::Config for Runtime {
 	type OmniverseProtocol = OmniverseProtocol;
 }
 
+/// Configure the pallet-omniverse-swap in pallets/omni-swap.
+impl pallet_omniverse_swap::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type OmniverseToken = OmniverseSwap;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub struct Runtime
@@ -315,6 +323,7 @@ construct_runtime!(
 		TemplateModule: pallet_template,
 		OmniverseProtocol: pallet_omniverse_protocol,
 		OmniverseFactory: pallet_omniverse_factory,
+		OmniverseSwap: pallet_omniverse_swap,
 	}
 );
 
@@ -364,6 +373,7 @@ mod benches {
 		[pallet_template, TemplateModule]
 		[pallet_omniverse_protocol, OmniverseProtocol]
 		[pallet_omniverse_factory, OmniverseFactory]
+		[pallet_omniverse_swap, OmniverseSwap]
 	);
 }
 
