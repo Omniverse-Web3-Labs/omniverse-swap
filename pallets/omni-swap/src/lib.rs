@@ -59,11 +59,8 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		// SomethingStored(u32, T::AccountId),
-		TokenPurchase(Vec<u8>, T::AccountId, u128, u128),
-		SwapAtoBTokens(Vec<u8>, T::AccountId, u128, u128),
-		SwapBtoATokens(Vec<u8>, T::AccountId, u128, u128),
+		SwapX2YTokens(Vec<u8>, T::AccountId, u128, u128),
+		SwapY2XTokens(Vec<u8>, T::AccountId, u128, u128),
 		AddLiquidity(Vec<u8>, T::AccountId, u128, u128),
 		RemoveLiquidity(Vec<u8>, T::AccountId, u128, u128),
 	}
@@ -95,91 +92,91 @@ pub mod pallet {
 
 		/// Convert A token to B token
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
-		pub fn swap_atob(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_a_id: Vec<u8>, token_a_data: OmniverseTokenProtocol) -> DispatchResult {
+		pub fn swap_x2y(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_x_id: Vec<u8>, token_x_data: OmniverseTokenProtocol) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
 			// Transfer A token to MPC account
-			T::OmniverseToken::send_transaction_external(token_a_id, &token_a_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
 
-			let (input_reserve, out_reserve) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
-			let tokens_bought: u128 = get_input_price(tokens_sold, input_reserve, out_reserve);
+			let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
+			let tokens_bought: u128 = get_input_price(tokens_sold, reserve_x, reserve_y);
 			ensure!(tokens_bought >= min_token, Error::<T>::InvalidValue);
 			<TradingPairs<T>>::insert(
 				&trading_pair,
-				(input_reserve + tokens_sold, out_reserve - tokens_bought)
+				(reserve_x + tokens_sold, reserve_y - tokens_bought)
 			);
 			
 			let key = (trading_pair.clone(), sender.clone());
-			if let Some((balance_a, mut balance_b)) = Balance::<T>::get(&key) {
-				balance_b = balance_b + tokens_bought;
-				<Balance<T>>::insert(&key, (balance_a, balance_b));
+			if let Some((balance_x, mut balance_y)) = Balance::<T>::get(&key) {
+				balance_y = balance_y + tokens_bought;
+				<Balance<T>>::insert(&key, (balance_x, balance_y));
 			} else {
 				<Balance<T>>::insert(&key, (0u128, tokens_bought));
 			}
 
-			Self::deposit_event(Event::SwapAtoBTokens(trading_pair, sender, tokens_sold, tokens_bought));
+			Self::deposit_event(Event::SwapX2YTokens(trading_pair, sender, tokens_sold, tokens_bought));
 			Ok(())
 		}
 
 		/// Convert B token to A token
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn swap_btoa(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_b_id: Vec<u8>, token_b_data: OmniverseTokenProtocol) -> DispatchResult{
+		pub fn swap_y2x(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_y_id: Vec<u8>, token_y_data: OmniverseTokenProtocol) -> DispatchResult{
 			let sender = ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
 			// Transfer B token to MPC account
-			T::OmniverseToken::send_transaction_external(token_b_id, &token_b_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
 
-			let (input_reserve, out_reserve) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
-			let tokens_bought = get_input_price(tokens_sold, out_reserve, input_reserve);
+			let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
+			let tokens_bought = get_input_price(tokens_sold, reserve_y, reserve_x);
 			ensure!(tokens_bought >= min_token, Error::<T>::InvalidValue);
 			<TradingPairs<T>>::insert(
 				&trading_pair,
-				(input_reserve - tokens_bought, out_reserve + tokens_sold)
+				(reserve_x - tokens_bought, reserve_y + tokens_sold)
 			);
 
 			let key = (trading_pair.clone(), sender.clone());
-			if let Some((mut balance_a, balance_b)) = Balance::<T>::get(&key) {
-				balance_a = balance_a + tokens_bought;
-				<Balance<T>>::insert(&key, (balance_a, balance_b));
+			if let Some((mut balance_x, balance_y)) = Balance::<T>::get(&key) {
+				balance_x = balance_x + tokens_bought;
+				<Balance<T>>::insert(&key, (balance_x, balance_y));
 			} else {
 				<Balance<T>>::insert(&key, (tokens_bought, 0u128));
 			}
 
-			Self::deposit_event(Event::SwapBtoATokens(trading_pair, sender, tokens_sold, tokens_bought));
+			Self::deposit_event(Event::SwapY2XTokens(trading_pair, sender, tokens_sold, tokens_bought));
 			Ok(())
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn add_liquidity(origin: OriginFor<T>, trading_pair: Vec<u8>, amount_a_desired: u128, amount_b_desired: u128, amount_a_min: u128, amount_b_min: u128, token_a_id: Vec<u8>, token_a_data: OmniverseTokenProtocol, token_b_id: Vec<u8>, token_b_data: OmniverseTokenProtocol) -> DispatchResult {
+		pub fn add_liquidity(origin: OriginFor<T>, trading_pair: Vec<u8>, amount_x_desired: u128, amount_y_desired: u128, amount_x_min: u128, amount_y_min: u128, token_x_id: Vec<u8>, token_x_data: OmniverseTokenProtocol, token_y_id: Vec<u8>, token_y_data: OmniverseTokenProtocol) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
-			ensure!(amount_a_desired > 0 && amount_b_desired > 0, Error::<T>::InvalidValue);
+			ensure!(amount_x_desired > 0 && amount_y_desired > 0, Error::<T>::InvalidValue);
 			let tranding_pair = TradingPairs::<T>::get(&trading_pair);
-			let amount_a: u128;
-			let amount_b: u128;
+			let amount_x: u128;
+			let amount_y: u128;
 			if tranding_pair.is_some() {
-				let (reserve_a, reserve_b) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
-				let amount_b_optimal = quote(amount_a_desired, reserve_a, reserve_b);
-				if amount_b_optimal <= amount_b_desired {
-					ensure!(amount_b_optimal > 0 && amount_b_min > 0, Error::<T>::InsufficientBAmount);
-					amount_a = amount_a_desired;
-					amount_b = amount_b_optimal;
+				let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
+				let amount_y_optimal = quote(amount_x_desired, reserve_x, reserve_y);
+				if amount_y_optimal <= amount_y_desired {
+					ensure!(amount_y_optimal > 0 && amount_y_min > 0, Error::<T>::InsufficientBAmount);
+					amount_x = amount_x_desired;
+					amount_y = amount_y_optimal;
 				} else {
-					let amount_a_optimal = quote(amount_b_desired, reserve_b, reserve_a);
-					ensure!(amount_a_optimal <= amount_a_desired, Error::<T>::ExceedDesiredAmount);
-					ensure!(amount_a_optimal > 0 && amount_a_min > 0, Error::<T>::InsufficientAAmount);
-					amount_a = amount_a_optimal;
-					amount_b = amount_b_desired;
+					let amount_x_optimal = quote(amount_y_desired, reserve_y, reserve_x);
+					ensure!(amount_x_optimal <= amount_x_desired, Error::<T>::ExceedDesiredAmount);
+					ensure!(amount_x_optimal > 0 && amount_x_min > 0, Error::<T>::InsufficientAAmount);
+					amount_x = amount_x_optimal;
+					amount_y = amount_y_desired;
 				}
 				<TradingPairs<T>>::insert(
 					&trading_pair,
-					(reserve_a + amount_a, reserve_b + amount_b)
+					(reserve_x + amount_x, reserve_y + amount_y)
 				);
 			} else {
-				amount_a = amount_a_desired;
-				amount_b = amount_b_desired;
+				amount_x = amount_x_desired;
+				amount_y = amount_y_desired;
 				<TradingPairs<T>>::insert(
 					&trading_pair,
-					(amount_a, amount_b)
+					(amount_x, amount_y)
 				);
 				<TotalLiquidity<T>>::insert(
 					&trading_pair,
@@ -188,19 +185,19 @@ pub mod pallet {
 			}
 
 			// transfer A token and B token to MPC address
-			T::OmniverseToken::send_transaction_external(token_a_id, &token_a_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
-			T::OmniverseToken::send_transaction_external(token_b_id, &token_b_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
 
 			// mint
-			let (balance_a, balance_b) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
+			let (balance_x, balance_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			let mut total_supply = TotalLiquidity::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			let liquidity: u128;
 			if total_supply == 0 {
-				liquidity = (amount_a * amount_b).pow(2u32).saturating_sub(1000);
+				liquidity = (amount_x * amount_y).pow(2u32).saturating_sub(1000);
 				total_supply = liquidity;
 			} else {
 				// liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
-				liquidity = (amount_a.saturating_mul(total_supply) / (balance_a - amount_a)).min(amount_b.saturating_mul(total_supply) / (balance_b - amount_b));
+				liquidity = (amount_x.saturating_mul(total_supply) / (balance_x - amount_x)).min(amount_y.saturating_mul(total_supply) / (balance_y - amount_y));
 				total_supply += liquidity;
 			}
 
@@ -209,52 +206,52 @@ pub mod pallet {
 			<Liquidity::<T>>::insert(&key, balances);
 			<TotalLiquidity::<T>>::insert(&trading_pair, total_supply);
 
-			Self::deposit_event(Event::AddLiquidity(trading_pair, sender, amount_a, amount_b));
+			Self::deposit_event(Event::AddLiquidity(trading_pair, sender, amount_x, amount_y));
 			Ok(())
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn remove_liquidity(origin: OriginFor<T>, trading_pair: Vec<u8>, liquidity: u128, amount_a_min: u128, amount_b_min: u128) -> DispatchResult {
+		pub fn remove_liquidity(origin: OriginFor<T>, trading_pair: Vec<u8>, liquidity: u128, amount_x_min: u128, amount_y_min: u128) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			let key = (trading_pair.clone(), sender.clone());
 			let balances = Liquidity::<T>::get(&key).unwrap_or(0);
 			ensure!(balances >= liquidity, Error::<T>::InvalidValue);
 			
 			// burn
-			let (reserve_a, reserve_b) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
+			let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			<Liquidity::<T>>::insert(&key, balances - liquidity);
 			let total_supply = TotalLiquidity::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
-			let amount_a = liquidity.saturating_mul(reserve_a) / total_supply;
-			let amount_b = liquidity.saturating_mul(reserve_b) / total_supply;
-			ensure!(amount_a >= amount_a_min && amount_b >= amount_b_min, Error::<T>::InsufficientAmount);
+			let amount_x = liquidity.saturating_mul(reserve_x) / total_supply;
+			let amount_y = liquidity.saturating_mul(reserve_y) / total_supply;
+			ensure!(amount_x >= amount_x_min && amount_y >= amount_y_min, Error::<T>::InsufficientAmount);
 
 			<TotalLiquidity::<T>>::insert(&trading_pair, total_supply - liquidity);
-			<TradingPairs::<T>>::insert(&trading_pair, (reserve_a - amount_a, reserve_b - amount_b));
+			<TradingPairs::<T>>::insert(&trading_pair, (reserve_x - amount_x, reserve_y - amount_y));
 			// MPC transfer A and B token to sender
-			if let Some((mut balance_a, mut balance_b)) = Balance::<T>::get(&key) {
-				balance_a = balance_a + amount_a;
-				balance_b = balance_b + amount_b;
-				<Balance<T>>::insert(&key, (balance_a, balance_b));
+			if let Some((mut balance_x, mut balance_y)) = Balance::<T>::get(&key) {
+				balance_x = balance_x + amount_x;
+				balance_y = balance_y + amount_y;
+				<Balance<T>>::insert(&key, (balance_x, balance_y));
 			} else {
-				<Balance<T>>::insert(&key, (amount_a, amount_b));
+				<Balance<T>>::insert(&key, (amount_x, amount_y));
 			}
 			
-			Self::deposit_event(Event::RemoveLiquidity(trading_pair, sender, amount_a, amount_b));
+			Self::deposit_event(Event::RemoveLiquidity(trading_pair, sender, amount_x, amount_y));
 			Ok(())
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn transfer_a_token(origin: OriginFor<T>, trading_pair: Vec<u8>, to: T::AccountId, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
+		pub fn transfer_x_token(origin: OriginFor<T>, trading_pair: Vec<u8>, to: T::AccountId, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to`
 			let key = (trading_pair.clone(), to);
 			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
 			if op_data.op == TRANSFER {
 				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				if let Some((balance_a, balance_b)) = Balance::<T>::get(&key) {
-					if transfer_data.amount <= balance_a {
+				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
+					if transfer_data.amount <= balance_x {
 						T::OmniverseToken::send_transaction_external(token_id, &data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
-						<Balance<T>>::insert(&key, (balance_a - transfer_data.amount, balance_b));
+						<Balance<T>>::insert(&key, (balance_x - transfer_data.amount, balance_y));
 					}
 				}
 			}
@@ -262,17 +259,17 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn transfer_b_token(origin: OriginFor<T>, trading_pair: Vec<u8>, to: T::AccountId, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
+		pub fn transfer_y_token(origin: OriginFor<T>, trading_pair: Vec<u8>, to: T::AccountId, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to`
 			let key = (trading_pair.clone(), to);
 			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
 			if op_data.op == TRANSFER {
 				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				if let Some((balance_a, balance_b)) = Balance::<T>::get(&key) {
-					if transfer_data.amount <= balance_b {
+				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
+					if transfer_data.amount <= balance_y {
 						T::OmniverseToken::send_transaction_external(token_id, &data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
-						<Balance<T>>::insert(&key, (balance_a, balance_b - transfer_data.amount));
+						<Balance<T>>::insert(&key, (balance_x, balance_y - transfer_data.amount));
 					}
 				}
 			}
@@ -297,8 +294,8 @@ pub mod pallet {
 	}
 
 	/// given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
-	pub fn quote(amount_a: u128, reserve_a: u128, reserve_b: u128) -> u128{
-		amount_a * reserve_b / reserve_a
+	pub fn quote(amount_x: u128, reserve_x: u128, reserve_y: u128) -> u128{
+		amount_x * reserve_y / reserve_x
 }
 	// }
 }
