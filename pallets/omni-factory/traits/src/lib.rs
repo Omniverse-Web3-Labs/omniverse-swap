@@ -6,51 +6,6 @@ use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol};
 use sp_std::vec::Vec;
 use codec::{Encode, Decode};
 
-#[derive(Decode, Encode, Debug)]
-pub struct TokenOpcode {
-    pub op: u8,
-    pub data: Vec<u8>
-}
-
-impl TokenOpcode {
-    pub fn new(op: u8, data: Vec<u8>) -> Self {
-        Self {
-            op,
-            data,
-        }
-    }
-}
-
-#[derive(Decode, Encode, Debug)]
-pub struct MintTokenOp {
-    pub to: [u8; 64],
-    pub amount: u128
-}
-
-impl MintTokenOp {
-    pub fn new(to: [u8; 64], amount: u128) -> Self {
-        Self {
-            to,
-            amount,
-        }
-    }
-}
-
-#[derive(Decode, Encode, Debug)]
-pub struct TransferTokenOp {
-    pub to: [u8; 64],
-    pub amount: u128
-}
-
-impl TransferTokenOp {
-    pub fn new(to: [u8; 64], amount: u128) -> Self {
-        Self {
-            to,
-            amount,
-        }
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum FactoryResult {
     Success,

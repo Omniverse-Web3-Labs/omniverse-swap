@@ -1,12 +1,10 @@
 use crate::mock::*;
 use frame_support::assert_ok;
 use secp256k1::{Secp256k1, Message, ecdsa::RecoverableSignature, SecretKey, PublicKey};
-use omniverse_protocol_traits::OmniverseTokenProtocol;
+use omniverse_protocol_traits::{OmniverseTokenProtocol, TRANSFER, TokenOpcode, TransferTokenOp};
 // use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError};
 use codec::Encode;
 use secp256k1::rand::rngs::OsRng;
-use omniverse_token_traits::{TokenOpcode, TransferTokenOp};
-use pallet_omniverse_factory::TRANSFER;
 
 const CHAIN_ID: u8 = 1;
 const TOKEN_ID: Vec<u8> = Vec::<u8>::new();

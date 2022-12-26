@@ -14,13 +14,9 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
-	use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol};
-	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryResult, FactoryError, TransferTokenOp, MintTokenOp, TokenOpcode};
-
-	pub const DEPOSIT: u8 = 0_u8;
-	pub const TRANSFER: u8 = 1_u8;
-	pub const WITHDRAW: u8 = 2_u8;
-	pub const MINT: u8 = 3_u8;
+	use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol,
+		TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode};
+	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryResult, FactoryError};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -189,15 +185,9 @@ pub mod pallet {
 	
 			// Execute
 			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-			if op_data.op == DEPOSIT {
-	
-			}
-			else if op_data.op == TRANSFER {
+			if op_data.op == TRANSFER {
 				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
 				self.omniverse_transfer::<T>(data.from, transfer_data.to, transfer_data.amount)?;
-			}
-			else if op_data.op == WITHDRAW {
-	
 			}
 			else if op_data.op == MINT {
 				let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();

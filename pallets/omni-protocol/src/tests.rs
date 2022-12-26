@@ -1,7 +1,9 @@
 use crate::{mock::*, Error};
-use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError, get_transaction_hash};
+use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError,
+    TransferTokenOp, TokenOpcode, TRANSFER, get_transaction_hash};
 use frame_support::{assert_noop, assert_ok, assert_err};
 use sha3::{Digest, Keccak256};
+use codec::{Encode, Decode};
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{Secp256k1, Message, ecdsa::RecoverableSignature, SecretKey, PublicKey};
 
@@ -17,7 +19,10 @@ fn get_sig_slice(sig: &RecoverableSignature) -> [u8; 65] {
 }
 
 fn encode_transaction(secp: &Secp256k1<secp256k1::All>, from: (SecretKey, PublicKey), nonce: u128) -> OmniverseTokenProtocol {
-    encode_transaction_with_data(secp, from, nonce, vec![1, 2, 3])
+    let pk: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
+    let transfer_data = TransferTokenOp::new(pk, 0).encode();
+    let data = TokenOpcode::new(TRANSFER, transfer_data).encode();
+    encode_transaction_with_data(secp, from, nonce, data)
 }
 
 fn encode_transaction_with_data(secp: &Secp256k1<secp256k1::All>, from: (SecretKey, PublicKey), nonce: u128, data: Vec<u8>) -> OmniverseTokenProtocol {
@@ -121,14 +126,16 @@ fn it_works_for_malicious_transaction() {
         let nonce = OmniverseProtocol::get_transaction_count(pk);
 
         // Encode transaction
-        let data = encode_transaction_with_data(&secp, (secret_key, public_key), nonce, vec![1]);
+        let data = encode_transaction(&secp, (secret_key, public_key), nonce);
 
         let ret = OmniverseProtocol::verify_transaction(&data);
         assert!(ret.is_ok());
         assert_eq!(ret.unwrap(), VerifyResult::Success);
 
         // Encode a malicious transaction
-        let data_new = encode_transaction_with_data(&secp, (secret_key, public_key), nonce, vec![2]);
+        let transfer_data = TransferTokenOp::new(pk, 1).encode();
+        let op_data = TokenOpcode::new(TRANSFER, transfer_data).encode();
+        let data_new = encode_transaction_with_data(&secp, (secret_key, public_key), nonce, op_data);
 
         let ret = OmniverseProtocol::verify_transaction(&data_new);
         assert!(ret.is_ok());
@@ -148,7 +155,7 @@ fn it_works_for_duplicated_transaction() {
         let nonce = OmniverseProtocol::get_transaction_count(pk);
 
         // Encode transaction
-        let data = encode_transaction_with_data(&secp, (secret_key, public_key), nonce, vec![1]);
+        let data = encode_transaction(&secp, (secret_key, public_key), nonce);
 
         let ret = OmniverseProtocol::verify_transaction(&data);
         assert!(ret.is_ok());
