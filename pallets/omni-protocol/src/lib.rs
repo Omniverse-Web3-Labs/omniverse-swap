@@ -40,7 +40,7 @@ pub mod pallet {
 	#[pallet::getter(fn transaction_recorder)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type TransactionRecorder<T:Config> = StorageMap<_, Blake2_128Concat, [u8; 64], Vec<OmniverseTx>>;
+	pub type TransactionRecorder<T:Config> = StorageDoubleMap<_, Blake2_128Concat, [u8; 64], Blake2_128Concat, u128, OmniverseTx>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn transaction_count)]
@@ -59,6 +59,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		TransactionSent([u8; 64], u128),
 	}
 
     // Errors inform users that something went wrong.
@@ -107,8 +108,7 @@ pub mod pallet {
 
 	impl<T: Config> OmniverseAccounts for Pallet<T> {
 		fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
-			let mut tr = TransactionRecorder::<T>::get(&data.from).unwrap_or(Vec::<OmniverseTx>::default());
-			let nonce = tr.len() as u128;
+			let nonce = TransactionCount::<T>::get(&data.from);
 	
 			let tx_hash_bytes = get_transaction_hash(&data);
 
@@ -122,14 +122,14 @@ pub mod pallet {
 			if nonce == data.nonce {
 				// Add to transaction recorder
 				let omni_tx = OmniverseTx::new(data.clone());
-				tr.push(omni_tx);
-				TransactionRecorder::<T>::insert(&data.from, tr);
+				TransactionRecorder::<T>::insert(&data.from, &nonce, omni_tx);
 				TransactionCount::<T>::insert(&data.from, nonce + 1);
+				Self::deposit_event(Event::TransactionSent(data.from, nonce));
 				Ok(VerifyResult::Success)
 			}
 			else if nonce > data.nonce {
 				// Check conflicts
-				let his_tx = &tr[data.nonce as usize];
+				let his_tx = TransactionRecorder::<T>::get(&data.from, &data.nonce).unwrap();
 				let his_tx_hash = get_transaction_hash(&his_tx.tx_data);
 				if his_tx_hash != tx_hash_bytes {
 					let omni_tx = OmniverseTx::new(data.clone());
@@ -149,12 +149,7 @@ pub mod pallet {
 		}
 	
 		fn get_transaction_count(pk: [u8; 64]) -> u128 {
-			let record = Self::transaction_recorder(pk);
-			if let Some(r) = record {
-				return r.len() as u128;
-			}
-	
-			0
+			Self::transaction_count(pk)
 		}
 	
 		fn is_malicious(pk: [u8; 64]) -> bool {
