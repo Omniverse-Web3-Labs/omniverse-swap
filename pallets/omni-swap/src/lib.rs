@@ -81,7 +81,10 @@ pub mod pallet {
 		InsufficientLiquidity,
 		InsufficientAmount,
 		OmniverseTransferFailed,
+		InsufficientOmniverseTransferAmount,
 		NotOmniverseTransfer,
+		GetXTokenLessThenDesired,
+		GetYTokenLessThenDesired,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -90,17 +93,17 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 
-		/// Convert A token to B token
+		/// Convert X token to Y token
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
 		pub fn swap_x2y(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_x_id: Vec<u8>, token_x_data: OmniverseTokenProtocol) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
-			// Transfer A token to MPC account
+			// Transfer X token to MPC account
 			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
 
 			let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			let tokens_bought: u128 = get_input_price(tokens_sold, reserve_x, reserve_y);
-			ensure!(tokens_bought >= min_token, Error::<T>::InvalidValue);
+			ensure!(tokens_bought >= min_token, Error::<T>::GetYTokenLessThenDesired);
 			<TradingPairs<T>>::insert(
 				&trading_pair,
 				(reserve_x + tokens_sold, reserve_y - tokens_bought)
@@ -118,17 +121,17 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Convert B token to A token
+		/// Convert Y token to X token
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
 		pub fn swap_y2x(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_y_id: Vec<u8>, token_y_data: OmniverseTokenProtocol) -> DispatchResult{
 			let sender = ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
-			// Transfer B token to MPC account
+			// Transfer Y token to MPC account
 			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
 
 			let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			let tokens_bought = get_input_price(tokens_sold, reserve_y, reserve_x);
-			ensure!(tokens_bought >= min_token, Error::<T>::InvalidValue);
+			ensure!(tokens_bought >= min_token, Error::<T>::GetXTokenLessThenDesired);
 			<TradingPairs<T>>::insert(
 				&trading_pair,
 				(reserve_x - tokens_bought, reserve_y + tokens_sold)
@@ -184,9 +187,26 @@ pub mod pallet {
 				);
 			}
 
-			// transfer A token and B token to MPC address
-			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			let op_data_x = TokenOpcode::decode(&mut token_x_data.data.as_slice()).unwrap();
+			let op_data_y = TokenOpcode::decode(&mut token_y_data.data.as_slice()).unwrap();
+			ensure!(op_data_x.op == TRANSFER && op_data_y.op == TRANSFER, Error::<T>::NotOmniverseTransfer);
+			let transfer_data_x = TransferTokenOp::decode(&mut op_data_x.data.as_slice()).unwrap();
+			let transfer_data_y = TransferTokenOp::decode(&mut op_data_y.data.as_slice()).unwrap();
+			ensure!(transfer_data_x.amount >= amount_x && transfer_data_y.amount >= amount_y, Error::<T>::InsufficientOmniverseTransferAmount);
+			let key = (trading_pair.clone(), sender.clone());
+			
+			// The redundant token transferred needs to be returned to the user.
+			if let Some((mut balance_x, mut balance_y)) = Balance::<T>::get(&key) {
+				balance_x = balance_x + transfer_data_x.amount - amount_x;
+				balance_y = balance_y + transfer_data_y.amount - amount_y;
+				<Balance<T>>::insert(&key, (balance_x, balance_y));
+			} else {
+				<Balance<T>>::insert(&key, (transfer_data_x.amount - amount_x, transfer_data_y.amount - amount_y));
+			}
+			
+			// transfer X token and Y token to MPC address
 			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
 
 			// mint
 			let (balance_x, balance_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
@@ -200,8 +220,6 @@ pub mod pallet {
 				liquidity = (amount_x.saturating_mul(total_supply) / (balance_x - amount_x)).min(amount_y.saturating_mul(total_supply) / (balance_y - amount_y));
 				total_supply += liquidity;
 			}
-
-			let key = (trading_pair.clone(), sender.clone());
 			let balances = Liquidity::<T>::get(&key).unwrap_or(0) + liquidity;
 			<Liquidity::<T>>::insert(&key, balances);
 			<TotalLiquidity::<T>>::insert(&trading_pair, total_supply);
@@ -227,7 +245,7 @@ pub mod pallet {
 
 			<TotalLiquidity::<T>>::insert(&trading_pair, total_supply - liquidity);
 			<TradingPairs::<T>>::insert(&trading_pair, (reserve_x - amount_x, reserve_y - amount_y));
-			// MPC transfer A and B token to sender
+			// MPC transfer X and Y token to sender
 			if let Some((mut balance_x, mut balance_y)) = Balance::<T>::get(&key) {
 				balance_x = balance_x + amount_x;
 				balance_y = balance_y + amount_y;
