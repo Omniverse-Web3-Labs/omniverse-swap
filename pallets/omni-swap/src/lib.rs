@@ -46,15 +46,18 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn liquidity)]
-	pub type Liquidity<T:Config> = StorageMap<_, Blake2_128Concat, (Vec<u8>, T::AccountId), u128>;
+	pub type Liquidity<T:Config> = StorageMap<_, Blake2_128Concat, (Vec<u8>, [u8; 64]), u128>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn balance)]
-	pub type Balance<T:Config> = StorageMap<_, Blake2_128Concat, (Vec<u8>, T::AccountId), (u128, u128)>;
+	pub type Balance<T:Config> = StorageMap<_, Blake2_128Concat, (Vec<u8>, [u8; 64]), (u128, u128)>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn public_key)]
-	pub type PublicKey<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, [u8; 64]>;
+	#[pallet::getter(fn token_id)]
+	pub type TokenId<T:Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (Vec<u8>, Vec<u8>)>;
+	// #[pallet::storage]
+	// #[pallet::getter(fn public_key)]
+	// pub type PublicKey<T:Config> = StorageMap<_, Blake2_128Concat, T::AccountId, [u8; 64]>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
@@ -62,10 +65,10 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
-		SwapX2YTokens(Vec<u8>, T::AccountId, u128, u128),
-		SwapY2XTokens(Vec<u8>, T::AccountId, u128, u128),
-		AddLiquidity(Vec<u8>, T::AccountId, u128, u128),
-		RemoveLiquidity(Vec<u8>, T::AccountId, u128, u128),
+		SwapX2YTokens(Vec<u8>, [u8; 64], u128, u128),
+		SwapY2XTokens(Vec<u8>, [u8; 64], u128, u128),
+		AddLiquidity(Vec<u8>, [u8; 64], u128, u128),
+		RemoveLiquidity(Vec<u8>, [u8; 64], u128, u128),
 	}
 
 	// Errors inform users that something went wrong.
@@ -83,7 +86,10 @@ pub mod pallet {
 		GetAddress0Failed,
 		InsufficientLiquidity,
 		InsufficientAmount,
-		OmniverseTransferFailed,
+		OmniverseTransferXFailed,
+		OmniverseTransferYFailed,
+		TokenIdNotExist,
+		MismatchTokenId,
 		InsufficientOmniverseTransferAmount,
 		NotOmniverseTransfer,
 		GetXTokenLessThenDesired,
@@ -101,13 +107,13 @@ pub mod pallet {
 		/// Convert X token to Y token
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
 		pub fn swap_x2y(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_x_id: Vec<u8>, token_x_data: OmniverseTokenProtocol) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
-			if !PublicKey::<T>::contains_key(&sender) {
-				<PublicKey<T>>::insert(&sender, token_x_data.from);
-			}
+			// if !PublicKey::<T>::contains_key(&sender) {
+			// 	<PublicKey<T>>::insert(&sender, token_x_data.from);
+			// }
 			// Transfer X token to MPC account
-			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferXFailed)?;
 
 			let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			let tokens_bought: u128 = get_input_price(tokens_sold, reserve_x, reserve_y);
@@ -117,7 +123,7 @@ pub mod pallet {
 				(reserve_x + tokens_sold, reserve_y - tokens_bought)
 			);
 			
-			let key = (trading_pair.clone(), sender.clone());
+			let key = (trading_pair.clone(), token_x_data.from);
 			if let Some((balance_x, mut balance_y)) = Balance::<T>::get(&key) {
 				balance_y = balance_y + tokens_bought;
 				<Balance<T>>::insert(&key, (balance_x, balance_y));
@@ -125,20 +131,20 @@ pub mod pallet {
 				<Balance<T>>::insert(&key, (0u128, tokens_bought));
 			}
 
-			Self::deposit_event(Event::SwapX2YTokens(trading_pair, sender, tokens_sold, tokens_bought));
+			Self::deposit_event(Event::SwapX2YTokens(trading_pair, token_x_data.from, tokens_sold, tokens_bought));
 			Ok(())
 		}
 
 		/// Convert Y token to X token
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
 		pub fn swap_y2x(origin: OriginFor<T>, trading_pair: Vec<u8>, tokens_sold: u128, min_token: u128, token_y_id: Vec<u8>, token_y_data: OmniverseTokenProtocol) -> DispatchResult{
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
-			if !PublicKey::<T>::contains_key(&sender) {
-				<PublicKey<T>>::insert(&sender, token_y_data.from);
-			}
+			// if !PublicKey::<T>::contains_key(&sender) {
+			// 	<PublicKey<T>>::insert(&sender, token_y_data.from);
+			// }
 			// Transfer Y token to MPC account
-			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferYFailed)?;
 
 			let (reserve_x, reserve_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			let tokens_bought = get_input_price(tokens_sold, reserve_y, reserve_x);
@@ -148,7 +154,7 @@ pub mod pallet {
 				(reserve_x - tokens_bought, reserve_y + tokens_sold)
 			);
 
-			let key = (trading_pair.clone(), sender.clone());
+			let key = (trading_pair.clone(), token_y_data.from);
 			if let Some((mut balance_x, balance_y)) = Balance::<T>::get(&key) {
 				balance_x = balance_x + tokens_bought;
 				<Balance<T>>::insert(&key, (balance_x, balance_y));
@@ -156,17 +162,20 @@ pub mod pallet {
 				<Balance<T>>::insert(&key, (tokens_bought, 0u128));
 			}
 
-			Self::deposit_event(Event::SwapY2XTokens(trading_pair, sender, tokens_sold, tokens_bought));
+			Self::deposit_event(Event::SwapY2XTokens(trading_pair, token_y_data.from, tokens_sold, tokens_bought));
 			Ok(())
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
 		pub fn add_liquidity(origin: OriginFor<T>, trading_pair: Vec<u8>, amount_x_desired: u128, amount_y_desired: u128, amount_x_min: u128, amount_y_min: u128, token_x_id: Vec<u8>, token_x_data: OmniverseTokenProtocol, token_y_id: Vec<u8>, token_y_data: OmniverseTokenProtocol) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 			ensure!(amount_x_desired > 0 && amount_y_desired > 0, Error::<T>::InvalidValue);
 			
-			if !PublicKey::<T>::contains_key(&sender) {
-				<PublicKey<T>>::insert(&sender, token_x_data.from);
+			// if !PublicKey::<T>::contains_key(&sender) {
+			// 	<PublicKey<T>>::insert(&sender, token_x_data.from);
+			// }
+			if !TokenId::<T>::contains_key(&trading_pair) {
+				<TokenId<T>>::insert(&trading_pair, (token_x_id.clone(), token_y_id.clone()));
 			}
 
 			let tranding_pair = TradingPairs::<T>::get(&trading_pair);
@@ -209,7 +218,7 @@ pub mod pallet {
 			let transfer_data_x = TransferTokenOp::decode(&mut op_data_x.data.as_slice()).unwrap();
 			let transfer_data_y = TransferTokenOp::decode(&mut op_data_y.data.as_slice()).unwrap();
 			ensure!(transfer_data_x.amount >= amount_x && transfer_data_y.amount >= amount_y, Error::<T>::InsufficientOmniverseTransferAmount);
-			let key = (trading_pair.clone(), sender.clone());
+			let key = (trading_pair.clone(), token_x_data.from);
 			
 			// The redundant token transferred needs to be returned to the user.
 			if let Some((mut balance_x, mut balance_y)) = Balance::<T>::get(&key) {
@@ -221,8 +230,8 @@ pub mod pallet {
 			}
 			
 			// transfer X token and Y token to MPC address
-			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
-			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+			T::OmniverseToken::send_transaction_external(token_x_id, &token_x_data).ok().ok_or(Error::<T>::OmniverseTransferXFailed)?;
+			T::OmniverseToken::send_transaction_external(token_y_id, &token_y_data).ok().ok_or(Error::<T>::OmniverseTransferYFailed)?;
 
 			// mint
 			let (balance_x, balance_y) = TradingPairs::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
@@ -240,14 +249,14 @@ pub mod pallet {
 			<Liquidity::<T>>::insert(&key, balances);
 			<TotalLiquidity::<T>>::insert(&trading_pair, total_supply);
 
-			Self::deposit_event(Event::AddLiquidity(trading_pair, sender, amount_x, amount_y));
+			Self::deposit_event(Event::AddLiquidity(trading_pair, token_x_data.from, amount_x, amount_y));
 			Ok(())
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn remove_liquidity(origin: OriginFor<T>, trading_pair: Vec<u8>, liquidity: u128, amount_x_min: u128, amount_y_min: u128) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			let key = (trading_pair.clone(), sender.clone());
+		pub fn remove_liquidity(origin: OriginFor<T>, trading_pair: Vec<u8>, public_key: [u8; 64], liquidity: u128, amount_x_min: u128, amount_y_min: u128) -> DispatchResult {
+			ensure_signed(origin)?;
+			let key = (trading_pair.clone(), public_key);
 			let balances = Liquidity::<T>::get(&key).unwrap_or(0);
 			ensure!(balances >= liquidity, Error::<T>::InvalidValue);
 			
@@ -270,23 +279,23 @@ pub mod pallet {
 				<Balance<T>>::insert(&key, (amount_x, amount_y));
 			}
 			
-			Self::deposit_event(Event::RemoveLiquidity(trading_pair, sender, amount_x, amount_y));
+			Self::deposit_event(Event::RemoveLiquidity(trading_pair, public_key, amount_x, amount_y));
 			Ok(())
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn transfer_x_token(origin: OriginFor<T>, trading_pair: Vec<u8>, to: T::AccountId, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
+		pub fn transfer_x_token(origin: OriginFor<T>, trading_pair: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y
-			let receiptor = PublicKey::<T>::get(&to).ok_or(Error::<T>::PublicKeyNotExist)?;
-			let key = (trading_pair.clone(), to);
 			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
 			if op_data.op == TRANSFER {
 				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				ensure!(transfer_data.to == receiptor, Error::<T>::MismatchReceiptor);
+				let key = (trading_pair.clone(), transfer_data.to);
 				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
 					ensure!(transfer_data.amount <= balance_x, Error::<T>::InsufficientAmount);
-					T::OmniverseToken::send_transaction_external(token_id, &data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+					let (token_x_id, _) = TokenId::<T>::get(&trading_pair).ok_or(Error::<T>::TokenIdNotExist)?;
+					ensure!(data.to == token_x_id, Error::<T>::MismatchTokenId);
+					T::OmniverseToken::send_transaction_external(token_x_id, &data).ok().ok_or(Error::<T>::OmniverseTransferXFailed)?;
 					<Balance<T>>::insert(&key, (balance_x - transfer_data.amount, balance_y));
 				}
 			}
@@ -294,24 +303,24 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())] 
-		pub fn transfer_y_token(origin: OriginFor<T>, trading_pair: Vec<u8>, to: T::AccountId, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
+		pub fn transfer_y_token(origin: OriginFor<T>, trading_pair: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y
-			let receiptor = PublicKey::<T>::get(&to).ok_or(Error::<T>::PublicKeyNotExist)?;
-			let key = (trading_pair.clone(), to);
 			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
 			if op_data.op == TRANSFER {
 				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				ensure!(transfer_data.to == receiptor, Error::<T>::MismatchReceiptor);
+				let key = (trading_pair.clone(), transfer_data.to);
 				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
 					ensure!(transfer_data.amount <= balance_y, Error::<T>::InsufficientAmount);
-					T::OmniverseToken::send_transaction_external(token_id, &data).ok().ok_or(Error::<T>::OmniverseTransferFailed)?;
+					let (_, token_y_id) = TokenId::<T>::get(&trading_pair).ok_or(Error::<T>::TokenIdNotExist)?;
+					ensure!(data.to == token_y_id, Error::<T>::MismatchTokenId);
+					T::OmniverseToken::send_transaction_external(token_y_id, &data).ok().ok_or(Error::<T>::OmniverseTransferYFailed)?;
 					<Balance<T>>::insert(&key, (balance_x, balance_y - transfer_data.amount));
 				}
 			}
 			Ok(())
 		}
-		
+
 	}
 
 	// impl<T: Config> Pallet<T> {

@@ -46,10 +46,10 @@ fn it_works_for_add_liquidity() {
     let trading_pair = vec![1];
     let data_x = encode_transfer(&secp, (secret_key, public_key), public_key, 100, nonce);
     let data_y = encode_transfer(&secp, (secret_key, public_key), public_key, 1, nonce);
-    assert_ok!(OmniSwap::add_liquidity(RuntimeOrigin::signed(1), trading_pair.clone(), 100, 1, 100, 1, vec![1], data_x, vec![2], data_y), ());
+    assert_ok!(OmniSwap::add_liquidity(RuntimeOrigin::signed(1), trading_pair.clone(), 100, 1, 100, 1, vec![1], data_x.clone(), vec![2], data_y), ());
     assert_eq!(OmniSwap::trading_pairs(trading_pair.clone()), Some((100, 1)));
     assert_eq!(OmniSwap::total_liquidity(trading_pair.clone()), Some(9000));
-    assert_eq!(OmniSwap::liquidity((trading_pair.clone(), 1)), Some(9000));
+    assert_eq!(OmniSwap::liquidity((trading_pair.clone(), data_x.from)), Some(9000));
   });
 }
 
@@ -67,15 +67,15 @@ fn it_works_for_remove_liquidity() {
     let trading_pair = vec![1];
     let data_x = encode_transfer(&secp, (secret_key, public_key), public_key, 100, nonce);
     let data_y = encode_transfer(&secp, (secret_key, public_key), public_key, 1, nonce);
-    assert_ok!(OmniSwap::add_liquidity(RuntimeOrigin::signed(1), trading_pair.clone(), 100, 1, 100, 1, vec![1], data_x, vec![2], data_y), ());
+    assert_ok!(OmniSwap::add_liquidity(RuntimeOrigin::signed(1), trading_pair.clone(), 100, 1, 100, 1, vec![1], data_x.clone(), vec![2], data_y), ());
     assert_eq!(OmniSwap::trading_pairs(trading_pair.clone()), Some((100, 1)));
     assert_eq!(OmniSwap::total_liquidity(trading_pair.clone()), Some(9000));
-    assert_eq!(OmniSwap::liquidity((trading_pair.clone(), 1)), Some(9000));
+    assert_eq!(OmniSwap::liquidity((trading_pair.clone(), data_x.from)), Some(9000));
 
-    assert_ok!(OmniSwap::remove_liquidity(RuntimeOrigin::signed(1), trading_pair.clone(), 9000, 100, 1));
+    assert_ok!(OmniSwap::remove_liquidity(RuntimeOrigin::signed(1), trading_pair.clone(), data_x.from, 9000, 100, 1));
     assert_eq!(OmniSwap::trading_pairs(trading_pair.clone()), Some((0, 0)));
     assert_eq!(OmniSwap::total_liquidity(trading_pair.clone()), Some(0));
-    assert_eq!(OmniSwap::liquidity((trading_pair.clone(), 1)), Some(0));
+    assert_eq!(OmniSwap::liquidity((trading_pair.clone(), data_x.from)), Some(0));
   });
 }
 
@@ -95,13 +95,13 @@ fn it_works_for_swap_x2y() {
     let data_y = encode_transfer(&secp, (secret_key, public_key), public_key, 10000, nonce);
     assert_ok!(OmniSwap::add_liquidity(RuntimeOrigin::signed(1), trading_pair.clone(), 1000000, 10000, 100, 1, vec![1], data_x.clone(), vec![2], data_y), ());
 
-    assert_ok!(OmniSwap::swap_x2y(RuntimeOrigin::signed(1), trading_pair.clone(), 1000, 1, vec![1], data_x), ());
+    assert_ok!(OmniSwap::swap_x2y(RuntimeOrigin::signed(1), trading_pair.clone(), 1000, 1, vec![1], data_x.clone()), ());
 
     // println!("{:?}", OmniSwap::trading_pairs(trading_pair.clone()));
     // println!("{:?}", OmniSwap::balance((trading_pair.clone(), 1)));
     
     assert_eq!(OmniSwap::trading_pairs(trading_pair.clone()), Some((1001000, 9991)));
-    assert_eq!(OmniSwap::balance((trading_pair.clone(), 1)), Some((0, 9)));
+    assert_eq!(OmniSwap::balance((trading_pair.clone(), data_x.from)), Some((0, 9)));
   });
 }
 
@@ -127,6 +127,6 @@ fn it_works_for_swap_y2x() {
     // println!("{:?}", OmniSwap::balance((trading_pair.clone(), 1)));
     
     assert_eq!(OmniSwap::trading_pairs(trading_pair.clone()), Some((999001, 10010)));
-    assert_eq!(OmniSwap::balance((trading_pair.clone(), 1)), Some((999, 0)));
+    assert_eq!(OmniSwap::balance((trading_pair.clone(), data_x.from)), Some((999, 0)));
   });
 }

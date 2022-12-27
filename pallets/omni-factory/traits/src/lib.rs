@@ -2,9 +2,8 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::unnecessary_mut_passed)]
 
-use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol};
+use omniverse_protocol_traits::OmniverseTokenProtocol;
 use sp_std::vec::Vec;
-use codec::{Encode, Decode};
 
 #[derive(Debug, PartialEq)]
 pub enum FactoryResult {
