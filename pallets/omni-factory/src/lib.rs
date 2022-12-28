@@ -70,6 +70,13 @@ pub mod pallet {
 		/// Errors should have helpful documentation associated with them.
 		TokenNotExist,
 		NotOwner,
+		WrongDestination,
+		UserIsMalicious,
+		BalanceOverflow,
+		SignerNotOwner,
+		ProtocolSignerNotCaller,
+		ProtocolSignatureError,
+		ProtocolNonceError,
 	}
 
     #[pallet::hooks]
@@ -105,7 +112,18 @@ pub mod pallet {
 		pub fn send_transaction(origin: OriginFor<T>, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
 			ensure_signed(origin)?;
 
-			Self::send_transaction_external(token_id, &data).map_err(|_| Error::<T>::TokenNotExist)?;
+			Self::send_transaction_external(token_id, &data).map_err(|err| {
+				match err {
+					FactoryError::TokenNotExist => Error::<T>::TokenNotExist,
+					FactoryError::WrongDestination => Error::<T>::WrongDestination,
+					FactoryError::UserIsMalicious => Error::<T>::UserIsMalicious,
+					FactoryError::ProtocolSignatureError => Error::<T>::ProtocolSignatureError,
+					FactoryError::ProtocolSignerNotCaller => Error::<T>::ProtocolSignerNotCaller,
+					FactoryError::ProtocolNonceError => Error::<T>::ProtocolNonceError,
+					FactoryError::BalanceOverflow => Error::<T>::BalanceOverflow,
+					FactoryError::SignerNotOwner => Error::<T>::SignerNotOwner,
+				}
+			})?;
 
 			Ok(())
 		}
