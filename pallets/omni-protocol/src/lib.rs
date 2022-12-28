@@ -124,7 +124,9 @@ pub mod pallet {
 				let omni_tx = OmniverseTx::new(data.clone());
 				TransactionRecorder::<T>::insert(&data.from, &nonce, omni_tx);
 				TransactionCount::<T>::insert(&data.from, nonce + 1);
-				Self::deposit_event(Event::TransactionSent(data.from, nonce));
+				if data.chain_id == CHAIN_ID {
+					Self::deposit_event(Event::TransactionSent(data.from, nonce));
+				}
 				Ok(VerifyResult::Success)
 			}
 			else if nonce > data.nonce {
