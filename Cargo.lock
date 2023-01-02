@@ -3703,7 +3703,6 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
- "pallet-omniverse-factory",
  "pallet-omniverse-protocol",
  "pallet-omniverse-swap",
  "pallet-randomness-collective-flip",
@@ -3903,6 +3902,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "omniverse-protocol-traits",
+ "omniverse-token-traits",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -3982,25 +3983,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-omniverse-factory"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "omniverse-protocol-traits",
- "omniverse-token-traits",
- "parity-scale-codec",
- "scale-info",
- "secp256k1 0.25.0",
- "sha3",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-omniverse-protocol"
 version = "4.0.0-dev"
 dependencies = [
@@ -4027,7 +4009,6 @@ dependencies = [
  "frame-system",
  "omniverse-protocol-traits",
  "omniverse-token-traits",
- "pallet-omniverse-factory",
  "parity-scale-codec",
  "scale-info",
  "secp256k1 0.25.0",

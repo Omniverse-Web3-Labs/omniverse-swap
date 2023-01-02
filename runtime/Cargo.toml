@@ -51,7 +51,7 @@ frame-system-benchmarking = { version = "4.0.0-dev", default-features = false, g
 # Local Dependencies
 pallet-template = { version = "4.0.0-dev", default-features = false, path = "../pallets/template" }
 pallet-omniverse-protocol = { version = "4.0.0-dev", default-features = false, path = "../pallets/omni-protocol" }
-pallet-omniverse-factory = { version = "4.0.0-dev", default-features = false, path = "../pallets/omni-factory" }
+# pallet-omniverse-factory = { version = "4.0.0-dev", default-features = false, path = "../pallets/omni-factory" }
 pallet-omniverse-swap = { version = "4.0.0-dev", default-features = false, path = "../pallets/omni-swap" }
 pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../pallets/assets" }
 

@@ -51,9 +51,6 @@ pub use pallet_template;
 /// Import the omniverse protocol pallet.
 pub use pallet_omniverse_protocol;
 
-/// Import the omniverse factory pallet.
-pub use pallet_omniverse_factory;
-
 pub use pallet_omniverse_swap;
 
 /// An index to a block.
@@ -286,6 +283,7 @@ parameter_types! {
 
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type OmniverseProtocol = OmniverseProtocol;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Currency = Balances;
@@ -329,16 +327,10 @@ impl pallet_omniverse_protocol::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-/// Configure the pallet-omniverse-factory in pallets/omni-factory.
-impl pallet_omniverse_factory::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type OmniverseProtocol = OmniverseProtocol;
-}
-
 /// Configure the pallet-omniverse-swap in pallets/omni-swap.
 impl pallet_omniverse_swap::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OmniverseToken = OmniverseFactory;
+	type OmniverseToken = Assets;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -360,7 +352,6 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		OmniverseProtocol: pallet_omniverse_protocol,
-		OmniverseFactory: pallet_omniverse_factory,
 		OmniverseSwap: pallet_omniverse_swap,
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
 	}
@@ -411,7 +402,6 @@ mod benches {
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
 		[pallet_omniverse_protocol, OmniverseProtocol]
-		[pallet_omniverse_factory, OmniverseFactory]
 		[pallet_omniverse_swap, OmniverseSwap]
 	);
 }
