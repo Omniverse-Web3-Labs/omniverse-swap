@@ -874,10 +874,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 	pub(super) fn handle_transaction(omniverse_token: OmniverseToken<T::AccountId>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, DispatchError> {
 		// Check if the tx destination is correct
-		ensure!(data.to != omniverse_token.token_id, Error::<T, I>::WrongDestination);
+		ensure!(data.to == omniverse_token.token_id, Error::<T, I>::WrongDestination);
 
 		// Check if the sender is honest
-		ensure!(T::OmniverseProtocol::is_malicious(data.from), Error::<T, I>::UserIsMalicious);
+		ensure!(!T::OmniverseProtocol::is_malicious(data.from), Error::<T, I>::UserIsMalicious);
 
 
 		// Verify the signature
@@ -904,7 +904,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		if op_data.op == TRANSFER {
 			Self::omniverse_transfer(omniverse_token, data.from, transfer_data.to, transfer_data.amount)?;
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
-			Self::do_transfer(id, &origin, &dest, amount, None, f).map_err(|_| (Error::<T, I>::DoTransferFailed))?;
+			Self::do_transfer(id, &origin, &dest, amount, None, f)?;
 		}
 		else if op_data.op == MINT {
 			let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
@@ -912,7 +912,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				return Err(Error::<T, I>::SignerNotOwner.into());
 			}
 			Self::omniverse_mint(omniverse_token, mint_data.to, mint_data.amount);
-			Self::do_mint(id, &dest, amount, Some(origin)).map_err(|_| (Error::<T, I>::DoMintFailed))?;
+			Self::do_mint(id, &dest, amount, Some(origin))?;
 		}
 
 		Ok(FactoryResult::Success)

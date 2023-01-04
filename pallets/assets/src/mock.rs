@@ -177,6 +177,15 @@ pub(crate) fn take_hooks() -> Vec<Hook> {
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec! [
+			(1, 1024),
+			(2, 10000),
+		],
+	}
+	.assimilate_storage(&mut storage)
+	.unwrap();
+
 	let config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
 		assets: vec![
 			// id, owner, is_sufficient, min_balance

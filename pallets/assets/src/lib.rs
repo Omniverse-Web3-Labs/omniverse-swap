@@ -559,33 +559,33 @@ pub mod pallet {
 			admin: AccountIdLookupOf<T>,
 			min_balance: T::Balance,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
-			let admin = T::Lookup::lookup(admin)?;
+			// let owner = ensure_signed(origin)?;
+			// let admin = T::Lookup::lookup(admin)?;
 
-			ensure!(!Asset::<T, I>::contains_key(id), Error::<T, I>::InUse);
-			ensure!(!min_balance.is_zero(), Error::<T, I>::MinBalanceZero);
+			// ensure!(!Asset::<T, I>::contains_key(id), Error::<T, I>::InUse);
+			// ensure!(!min_balance.is_zero(), Error::<T, I>::MinBalanceZero);
 
-			let deposit = T::AssetDeposit::get();
-			T::Currency::reserve(&owner, deposit)?;
+			// let deposit = T::AssetDeposit::get();
+			// T::Currency::reserve(&owner, deposit)?;
 
-			Asset::<T, I>::insert(
-				id,
-				AssetDetails {
-					owner: owner.clone(),
-					issuer: admin.clone(),
-					admin: admin.clone(),
-					freezer: admin.clone(),
-					supply: Zero::zero(),
-					deposit,
-					min_balance,
-					is_sufficient: false,
-					accounts: 0,
-					sufficients: 0,
-					approvals: 0,
-					is_frozen: false,
-				},
-			);
-			Self::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
+			// Asset::<T, I>::insert(
+			// 	id,
+			// 	AssetDetails {
+			// 		owner: owner.clone(),
+			// 		issuer: admin.clone(),
+			// 		admin: admin.clone(),
+			// 		freezer: admin.clone(),
+			// 		supply: Zero::zero(),
+			// 		deposit,
+			// 		min_balance,
+			// 		is_sufficient: false,
+			// 		accounts: 0,
+			// 		sufficients: 0,
+			// 		approvals: 0,
+			// 		is_frozen: false,
+			// 	},
+			// );
+			// Self::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(())
 		}
@@ -617,9 +617,9 @@ pub mod pallet {
 			is_sufficient: bool,
 			#[pallet::compact] min_balance: T::Balance,
 		) -> DispatchResult {
-			T::ForceOrigin::ensure_origin(origin)?;
-			let owner = T::Lookup::lookup(owner)?;
-			Self::do_force_create(id, owner, is_sufficient, min_balance)?;
+			// T::ForceOrigin::ensure_origin(origin)?;
+			// let owner = T::Lookup::lookup(owner)?;
+			// Self::do_force_create(id, owner, is_sufficient, min_balance)?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
@@ -651,11 +651,11 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			witness: DestroyWitness,
 		) -> DispatchResultWithPostInfo {
-			let maybe_check_owner = match T::ForceOrigin::try_origin(origin) {
-				Ok(_) => None,
-				Err(origin) => Some(ensure_signed(origin)?),
-			};
-			Self::do_destroy(id, witness, maybe_check_owner)?;
+			// let maybe_check_owner = match T::ForceOrigin::try_origin(origin) {
+			// 	Ok(_) => None,
+			// 	Err(origin) => Some(ensure_signed(origin)?),
+			// };
+			// Self::do_destroy(id, witness, maybe_check_owner)?;
 
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(Some(T::WeightInfo::destroy(
@@ -685,9 +685,9 @@ pub mod pallet {
 			beneficiary: AccountIdLookupOf<T>,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			let beneficiary = T::Lookup::lookup(beneficiary)?;
-			Self::do_mint(id, &beneficiary, amount, Some(origin))?;
+			// let origin = ensure_signed(origin)?;
+			// let beneficiary = T::Lookup::lookup(beneficiary)?;
+			// Self::do_mint(id, &beneficiary, amount, Some(origin))?;
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(())
 		}
@@ -714,11 +714,11 @@ pub mod pallet {
 			who: AccountIdLookupOf<T>,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			let who = T::Lookup::lookup(who)?;
+			// let origin = ensure_signed(origin)?;
+			// let who = T::Lookup::lookup(who)?;
 
-			let f = DebitFlags { keep_alive: false, best_effort: true };
-			let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
+			// let f = DebitFlags { keep_alive: false, best_effort: true };
+			// let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(())
 		}
@@ -748,11 +748,11 @@ pub mod pallet {
 			target: AccountIdLookupOf<T>,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			let dest = T::Lookup::lookup(target)?;
+			// let origin = ensure_signed(origin)?;
+			// let dest = T::Lookup::lookup(target)?;
 
-			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
-			Self::do_transfer(id, &origin, &dest, amount, None, f).map(|_| ())?;
+			// let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
+			// Self::do_transfer(id, &origin, &dest, amount, None, f).map(|_| ())?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
@@ -781,11 +781,11 @@ pub mod pallet {
 			target: AccountIdLookupOf<T>,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
-			let source = ensure_signed(origin)?;
-			let dest = T::Lookup::lookup(target)?;
+			// let source = ensure_signed(origin)?;
+			// let dest = T::Lookup::lookup(target)?;
 
-			let f = TransferFlags { keep_alive: true, best_effort: false, burn_dust: false };
-			Self::do_transfer(id, &source, &dest, amount, None, f).map(|_| ())?;
+			// let f = TransferFlags { keep_alive: true, best_effort: false, burn_dust: false };
+			// Self::do_transfer(id, &source, &dest, amount, None, f).map(|_| ())?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
@@ -816,12 +816,12 @@ pub mod pallet {
 			dest: AccountIdLookupOf<T>,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			let source = T::Lookup::lookup(source)?;
-			let dest = T::Lookup::lookup(dest)?;
+			// let origin = ensure_signed(origin)?;
+			// let source = T::Lookup::lookup(source)?;
+			// let dest = T::Lookup::lookup(dest)?;
 
-			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
-			Self::do_transfer(id, &source, &dest, amount, Some(origin), f).map(|_| ())?;
+			// let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
+			// Self::do_transfer(id, &source, &dest, amount, Some(origin), f).map(|_| ())?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
@@ -841,18 +841,18 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			who: AccountIdLookupOf<T>,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
+			// let origin = ensure_signed(origin)?;
 
-			let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-			ensure!(origin == d.freezer, Error::<T, I>::NoPermission);
-			let who = T::Lookup::lookup(who)?;
+			// let d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+			// ensure!(origin == d.freezer, Error::<T, I>::NoPermission);
+			// let who = T::Lookup::lookup(who)?;
 
-			Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
-				maybe_account.as_mut().ok_or(Error::<T, I>::NoAccount)?.is_frozen = true;
-				Ok(())
-			})?;
+			// Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
+			// 	maybe_account.as_mut().ok_or(Error::<T, I>::NoAccount)?.is_frozen = true;
+			// 	Ok(())
+			// })?;
 
-			Self::deposit_event(Event::<T, I>::Frozen { asset_id: id, who });
+			// Self::deposit_event(Event::<T, I>::Frozen { asset_id: id, who });
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(())
 		}
@@ -873,18 +873,18 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			who: AccountIdLookupOf<T>,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
+			// let origin = ensure_signed(origin)?;
 
-			let details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-			ensure!(origin == details.admin, Error::<T, I>::NoPermission);
-			let who = T::Lookup::lookup(who)?;
+			// let details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+			// ensure!(origin == details.admin, Error::<T, I>::NoPermission);
+			// let who = T::Lookup::lookup(who)?;
 
-			Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
-				maybe_account.as_mut().ok_or(Error::<T, I>::NoAccount)?.is_frozen = false;
-				Ok(())
-			})?;
+			// Account::<T, I>::try_mutate(id, &who, |maybe_account| -> DispatchResult {
+			// 	maybe_account.as_mut().ok_or(Error::<T, I>::NoAccount)?.is_frozen = false;
+			// 	Ok(())
+			// })?;
 
-			Self::deposit_event(Event::<T, I>::Thawed { asset_id: id, who });
+			// Self::deposit_event(Event::<T, I>::Thawed { asset_id: id, who });
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(())
 		}
@@ -903,18 +903,18 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::AssetId,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
+			// let origin = ensure_signed(origin)?;
 
-			Asset::<T, I>::try_mutate(id, |maybe_details| {
-				let d = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
-				ensure!(origin == d.freezer, Error::<T, I>::NoPermission);
+			// Asset::<T, I>::try_mutate(id, |maybe_details| {
+			// 	let d = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
+			// 	ensure!(origin == d.freezer, Error::<T, I>::NoPermission);
 
-				d.is_frozen = true;
+			// 	d.is_frozen = true;
 
-				Self::deposit_event(Event::<T, I>::AssetFrozen { asset_id: id });
-				Err(Error::<T, I>::Unsupport.into())
-				// Ok(())
-			})
+			// 	Self::deposit_event(Event::<T, I>::AssetFrozen { asset_id: id });
+			// 	// Ok(())
+			// })
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Allow unprivileged transfers for the asset again.
@@ -931,18 +931,19 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::AssetId,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
+			// let origin = ensure_signed(origin)?;
 
-			Asset::<T, I>::try_mutate(id, |maybe_details| {
-				let d = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
-				ensure!(origin == d.admin, Error::<T, I>::NoPermission);
+			// Asset::<T, I>::try_mutate(id, |maybe_details| {
+			// 	let d = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
+			// 	ensure!(origin == d.admin, Error::<T, I>::NoPermission);
 
-				d.is_frozen = false;
+			// 	d.is_frozen = false;
 
-				Self::deposit_event(Event::<T, I>::AssetThawed { asset_id: id });
-				Err(Error::<T, I>::Unsupport.into())
-				// Ok(())
-			})
+			// 	Self::deposit_event(Event::<T, I>::AssetThawed { asset_id: id });
+			// 	Err(Error::<T, I>::Unsupport.into())
+			// 	// Ok(())
+			// })
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Change the Owner of an asset.
@@ -961,28 +962,29 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			owner: AccountIdLookupOf<T>,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			let owner = T::Lookup::lookup(owner)?;
+			// let origin = ensure_signed(origin)?;
+			// let owner = T::Lookup::lookup(owner)?;
 
-			Asset::<T, I>::try_mutate(id, |maybe_details| {
-				let details = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
-				ensure!(origin == details.owner, Error::<T, I>::NoPermission);
-				if details.owner == owner {
-					return Err(Error::<T, I>::Unsupport.into())
-				}
+			// Asset::<T, I>::try_mutate(id, |maybe_details| {
+			// 	let details = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
+			// 	ensure!(origin == details.owner, Error::<T, I>::NoPermission);
+			// 	if details.owner == owner {
+			// 		return Err(Error::<T, I>::Unsupport.into())
+			// 	}
 
-				let metadata_deposit = Metadata::<T, I>::get(id).deposit;
-				let deposit = details.deposit + metadata_deposit;
+			// 	let metadata_deposit = Metadata::<T, I>::get(id).deposit;
+			// 	let deposit = details.deposit + metadata_deposit;
 
-				// Move the deposit to the new owner.
-				T::Currency::repatriate_reserved(&details.owner, &owner, deposit, Reserved)?;
+			// 	// Move the deposit to the new owner.
+			// 	T::Currency::repatriate_reserved(&details.owner, &owner, deposit, Reserved)?;
 
-				details.owner = owner.clone();
+			// 	details.owner = owner.clone();
 
-				Self::deposit_event(Event::OwnerChanged { asset_id: id, owner });
-				Err(Error::<T, I>::Unsupport.into())
-				// Ok(())
-			})
+			// 	Self::deposit_event(Event::OwnerChanged { asset_id: id, owner });
+			// 	Err(Error::<T, I>::Unsupport.into())
+			// 	// Ok(())
+			// })
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Change the Issuer, Admin and Freezer of an asset.
@@ -1005,23 +1007,24 @@ pub mod pallet {
 			admin: AccountIdLookupOf<T>,
 			freezer: AccountIdLookupOf<T>,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			let issuer = T::Lookup::lookup(issuer)?;
-			let admin = T::Lookup::lookup(admin)?;
-			let freezer = T::Lookup::lookup(freezer)?;
+			// let origin = ensure_signed(origin)?;
+			// let issuer = T::Lookup::lookup(issuer)?;
+			// let admin = T::Lookup::lookup(admin)?;
+			// let freezer = T::Lookup::lookup(freezer)?;
 
-			Asset::<T, I>::try_mutate(id, |maybe_details| {
-				let details = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
-				ensure!(origin == details.owner, Error::<T, I>::NoPermission);
+			// Asset::<T, I>::try_mutate(id, |maybe_details| {
+			// 	let details = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
+			// 	ensure!(origin == details.owner, Error::<T, I>::NoPermission);
 
-				details.issuer = issuer.clone();
-				details.admin = admin.clone();
-				details.freezer = freezer.clone();
+			// 	details.issuer = issuer.clone();
+			// 	details.admin = admin.clone();
+			// 	details.freezer = freezer.clone();
 
-				Self::deposit_event(Event::TeamChanged { asset_id: id, issuer, admin, freezer });
-				Err(Error::<T, I>::Unsupport.into())
-				// Ok(())
-			})
+			// 	Self::deposit_event(Event::TeamChanged { asset_id: id, issuer, admin, freezer });
+			// 	Err(Error::<T, I>::Unsupport.into())
+			// 	// Ok(())
+			// })
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Set the metadata for an asset.
@@ -1195,23 +1198,24 @@ pub mod pallet {
 			is_sufficient: bool,
 			is_frozen: bool,
 		) -> DispatchResult {
-			T::ForceOrigin::ensure_origin(origin)?;
+			// T::ForceOrigin::ensure_origin(origin)?;
 
-			Asset::<T, I>::try_mutate(id, |maybe_asset| {
-				let mut asset = maybe_asset.take().ok_or(Error::<T, I>::Unknown)?;
-				asset.owner = T::Lookup::lookup(owner)?;
-				asset.issuer = T::Lookup::lookup(issuer)?;
-				asset.admin = T::Lookup::lookup(admin)?;
-				asset.freezer = T::Lookup::lookup(freezer)?;
-				asset.min_balance = min_balance;
-				asset.is_sufficient = is_sufficient;
-				asset.is_frozen = is_frozen;
-				*maybe_asset = Some(asset);
+			// Asset::<T, I>::try_mutate(id, |maybe_asset| {
+			// 	let mut asset = maybe_asset.take().ok_or(Error::<T, I>::Unknown)?;
+			// 	asset.owner = T::Lookup::lookup(owner)?;
+			// 	asset.issuer = T::Lookup::lookup(issuer)?;
+			// 	asset.admin = T::Lookup::lookup(admin)?;
+			// 	asset.freezer = T::Lookup::lookup(freezer)?;
+			// 	asset.min_balance = min_balance;
+			// 	asset.is_sufficient = is_sufficient;
+			// 	asset.is_frozen = is_frozen;
+			// 	*maybe_asset = Some(asset);
 
-				Self::deposit_event(Event::AssetStatusChanged { asset_id: id });
-				Err(Error::<T, I>::Unsupport.into())
-				// Ok(())
-			})
+			// 	Self::deposit_event(Event::AssetStatusChanged { asset_id: id });
+			// 	Err(Error::<T, I>::Unsupport.into())
+			// 	// Ok(())
+			// })
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Approve an amount of asset for transfer by a delegated third-party account.
@@ -1241,9 +1245,9 @@ pub mod pallet {
 			delegate: AccountIdLookupOf<T>,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
-			let delegate = T::Lookup::lookup(delegate)?;
-			Self::do_approve_transfer(id, &owner, &delegate, amount)?;
+			// let owner = ensure_signed(origin)?;
+			// let delegate = T::Lookup::lookup(delegate)?;
+			// Self::do_approve_transfer(id, &owner, &delegate, amount)?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
@@ -1266,17 +1270,17 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			delegate: AccountIdLookupOf<T>,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
-			let delegate = T::Lookup::lookup(delegate)?;
-			let mut d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-			let approval =
-				Approvals::<T, I>::take((id, &owner, &delegate)).ok_or(Error::<T, I>::Unknown)?;
-			T::Currency::unreserve(&owner, approval.deposit);
+			// let owner = ensure_signed(origin)?;
+			// let delegate = T::Lookup::lookup(delegate)?;
+			// let mut d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+			// let approval =
+			// 	Approvals::<T, I>::take((id, &owner, &delegate)).ok_or(Error::<T, I>::Unknown)?;
+			// T::Currency::unreserve(&owner, approval.deposit);
 
-			d.approvals.saturating_dec();
-			Asset::<T, I>::insert(id, d);
+			// d.approvals.saturating_dec();
+			// Asset::<T, I>::insert(id, d);
 
-			Self::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
+			// Self::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(())
 		}
@@ -1301,25 +1305,25 @@ pub mod pallet {
 			owner: AccountIdLookupOf<T>,
 			delegate: AccountIdLookupOf<T>,
 		) -> DispatchResult {
-			let mut d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
-			T::ForceOrigin::try_origin(origin)
-				.map(|_| ())
-				.or_else(|origin| -> DispatchResult {
-					let origin = ensure_signed(origin)?;
-					ensure!(origin == d.admin, Error::<T, I>::NoPermission);
-					Ok(())
-				})?;
+			// let mut d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
+			// T::ForceOrigin::try_origin(origin)
+			// 	.map(|_| ())
+			// 	.or_else(|origin| -> DispatchResult {
+			// 		let origin = ensure_signed(origin)?;
+			// 		ensure!(origin == d.admin, Error::<T, I>::NoPermission);
+			// 		Ok(())
+			// 	})?;
 
-			let owner = T::Lookup::lookup(owner)?;
-			let delegate = T::Lookup::lookup(delegate)?;
+			// let owner = T::Lookup::lookup(owner)?;
+			// let delegate = T::Lookup::lookup(delegate)?;
 
-			let approval =
-				Approvals::<T, I>::take((id, &owner, &delegate)).ok_or(Error::<T, I>::Unknown)?;
-			T::Currency::unreserve(&owner, approval.deposit);
-			d.approvals.saturating_dec();
-			Asset::<T, I>::insert(id, d);
+			// let approval =
+			// 	Approvals::<T, I>::take((id, &owner, &delegate)).ok_or(Error::<T, I>::Unknown)?;
+			// T::Currency::unreserve(&owner, approval.deposit);
+			// d.approvals.saturating_dec();
+			// Asset::<T, I>::insert(id, d);
 
-			Self::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
+			// Self::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
 			Err(Error::<T, I>::Unsupport.into())
 			// Ok(())
 		}
@@ -1350,10 +1354,10 @@ pub mod pallet {
 			destination: AccountIdLookupOf<T>,
 			#[pallet::compact] amount: T::Balance,
 		) -> DispatchResult {
-			let delegate = ensure_signed(origin)?;
-			let owner = T::Lookup::lookup(owner)?;
-			let destination = T::Lookup::lookup(destination)?;
-			Self::do_transfer_approved(id, &owner, &delegate, &destination, amount)?;
+			// let delegate = ensure_signed(origin)?;
+			// let owner = T::Lookup::lookup(owner)?;
+			// let destination = T::Lookup::lookup(destination)?;
+			// Self::do_transfer_approved(id, &owner, &delegate, &destination, amount)?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
@@ -1368,7 +1372,7 @@ pub mod pallet {
 		/// Emits `Touched` event when successful.
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn touch(origin: OriginFor<T>, #[pallet::compact] id: T::AssetId) -> DispatchResult {
-			Self::do_touch(id, ensure_signed(origin)?)?;
+			// Self::do_touch(id, ensure_signed(origin)?)?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
@@ -1386,7 +1390,7 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			allow_burn: bool,
 		) -> DispatchResult {
-			Self::do_refund(id, ensure_signed(origin)?, allow_burn)?;
+			// Self::do_refund(id, ensure_signed(origin)?, allow_burn)?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
 
