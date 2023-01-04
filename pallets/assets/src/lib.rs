@@ -202,7 +202,6 @@ pub mod pallet {
 		type Balance: Member
 			+ Parameter
 			+ AtLeast32BitUnsigned
-			+ From<u128>
 			+ Default
 			+ Copy
 			+ MaybeSerializeDeserialize
@@ -533,6 +532,7 @@ pub mod pallet {
 		ProtocolSignerNotCaller,
 		ProtocolSignatureError,
 		ProtocolNonceError,
+		BalanceError,
 	}
 
 	#[pallet::call]
