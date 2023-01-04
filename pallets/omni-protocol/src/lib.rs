@@ -22,7 +22,6 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
 	use sp_io::crypto;	
-	use frame_support::dispatch::DispatchError;
 	use super::types::{OmniverseTokenProtocol, VerifyResult, VerifyError};
 	use super::traits::OmniverseAccounts;
 

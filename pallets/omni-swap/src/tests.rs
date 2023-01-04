@@ -1,8 +1,7 @@
 use crate::mock::*;
 use frame_support::assert_ok;
 use secp256k1::{Secp256k1, Message, ecdsa::RecoverableSignature, SecretKey, PublicKey};
-use omniverse_protocol_traits::{OmniverseTokenProtocol, TRANSFER, TokenOpcode, TransferTokenOp};
-// use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryError};
+use pallet_omniverse_protocol::{OmniverseTokenProtocol, TRANSFER, TokenOpcode, TransferTokenOp};
 use codec::Encode;
 use secp256k1::rand::rngs::OsRng;
 

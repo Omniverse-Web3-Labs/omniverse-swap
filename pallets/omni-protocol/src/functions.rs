@@ -1,4 +1,4 @@
-use codec::{Encode, Decode};
+use codec::{Decode};
 use sp_std::vec::Vec;
 use sp_core::{Hasher};
 use sp_runtime::{
