@@ -22,6 +22,7 @@ pub mod pallet {
 	// use sp_runtime::traits::TrailingZeroInput;
 	use pallet_omniverse_protocol::{OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, TRANSFER};
 	use pallet_assets::traits::OmniverseTokenFactoryHandler;
+	use sp_runtime::traits::IntegerSquareRoot;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -238,7 +239,7 @@ pub mod pallet {
 			let mut total_supply = TotalLiquidity::<T>::get(&trading_pair).ok_or(Error::<T>::TradingPairNotExist)?;
 			let liquidity: u128;
 			if total_supply == 0 {
-				liquidity = (amount_x * amount_y).pow(2u32).saturating_sub(1000);
+				liquidity = (amount_x * amount_y).integer_sqrt().saturating_sub(1000);
 				total_supply = liquidity;
 			} else {
 				// liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
