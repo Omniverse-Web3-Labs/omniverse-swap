@@ -143,10 +143,9 @@ use codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero,
-		IdentifyAccount, Verify,
+		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero
 	},
-	ArithmeticError, TokenError, MultiSigner,
+	ArithmeticError, TokenError,
 };
 use sp_std::{borrow::Borrow, prelude::*};
 
@@ -174,8 +173,10 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
-	use sp_core::ecdsa::Public;
 	use secp256k1::PublicKey;
+	use sp_runtime::traits::BlakeTwo256;
+	use sp_core::Hasher;
+	use frame_support::sp_runtime::traits::{Saturating, One};
 
 	use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol,
 		TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode};
@@ -213,7 +214,9 @@ pub mod pallet {
 			+ HasCompact
 			+ MaybeSerializeDeserialize
 			+ MaxEncodedLen
-			+ TypeInfo;
+			+ TypeInfo
+			+ Saturating
+			+ One;
 
 		/// The currency mechanism.
 		type Currency: ReservableCurrency<Self::AccountId>;
@@ -315,6 +318,14 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn tokens)]
 	pub type Tokens<T:Config<I>, I: 'static = ()> = StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn current_asset_id)]
+	pub type CurrentAssetId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, Vec<u8>, T::AssetId>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn token_id)]
+	pub type TokenId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, T::AssetId, Vec<u8>>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
@@ -1363,43 +1374,39 @@ pub mod pallet {
 			let public_key = PublicKey::from_slice(&owner_pk_full[..]).expect("public keys must be 33 or 65 bytes, serialized according to SEC 2");
 
 			let public_key_compressed = public_key.serialize();
+			let hash = BlakeTwo256::hash(&public_key_compressed);
+			let account = T::AccountId::decode(&mut &hash[..]).unwrap();
 
-			// let pb = Public::from_raw(public_key_compressed);
-			// let multi_signer = MultiSigner::Ecdsa(pb);
-			// let account = <<Signature as Verify>::Signer as IdentifyAccount>::into_account(multi_signer);
-
-			// let owner = account.clone();
-			// let issuer = account.clone();
-			// let admin = account.clone();
+			let owner = account.clone();
+			let admin = account.clone();
 
 			// Change assets
-			// let deposit = T::AssetDeposit::get();
-			// T::Currency::reserve(&owner, deposit)?;
+			let deposit = T::AssetDeposit::get();
+			T::Currency::reserve(&owner, deposit)?;
+			let mut id = CurrentAssetId::<T, I>::get(&token_id).unwrap_or_default();
+			while Asset::<T, I>::contains_key(id) {
+				id.saturating_inc();
+			}
 
-			// let id: T::AssetId = 0_u32;
-
-			// Asset::<T, I>::insert(
-			// 	id,
-			// 	AssetDetails {
-			// 		owner: owner.clone(),
-			// 		issuer: admin.clone(),
-			// 		admin: admin.clone(),
-			// 		freezer: admin.clone(),
-			// 		supply: Zero::zero(),
-			// 		deposit,
-			// 		min_balance: 1_000_000_000_000,
-			// 		is_sufficient: false,
-			// 		accounts: 0,
-			// 		sufficients: 0,
-			// 		approvals: 0,
-			// 		is_frozen: false,
-			// 	},
-			// );
-			// Self::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
-
-			// Emit an event.
-			// Self::deposit_event(Event::TokenCreated(sender, token_id));
-			// Return a successful DispatchResultWithPostInfo
+			
+			Asset::<T, I>::insert(
+				id,
+				AssetDetails {
+					owner: owner.clone(),
+					issuer: admin.clone(),
+					admin: admin.clone(),
+					freezer: admin.clone(),
+					supply: Zero::zero(),
+					deposit,
+					min_balance: Zero::zero(),
+					is_sufficient: false,
+					accounts: 0,
+					sufficients: 0,
+					approvals: 0,
+					is_frozen: false,
+				},
+			);
+			Self::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
 			Ok(())
 		}
 
