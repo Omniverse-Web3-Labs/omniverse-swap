@@ -228,6 +228,13 @@ pub enum ConversionError {
 	AssetNotSufficient,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum FactoryResult {
+    Success,
+    ProtocolMalicious,
+    ProtocolDuplicated,
+}
+
 // Type alias for `frame_system`'s account id.
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 // This pallet's asset id and balance type.

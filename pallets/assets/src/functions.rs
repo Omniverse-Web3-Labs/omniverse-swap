@@ -22,7 +22,6 @@ use frame_support::{traits::Get, BoundedVec};
 use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol,
 	TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode};
 use codec::Decode;
-use omniverse_token_traits::FactoryResult;
 use secp256k1::PublicKey;
 use sp_runtime::traits::BlakeTwo256;
 use sp_core::Hasher;
@@ -868,25 +867,22 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		})
 	}
 
-	pub(super) fn handle_transaction(omniverse_token: OmniverseToken<T::AccountId>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, Error::<T, I>> {
+	pub(super) fn handle_transaction(omniverse_token: OmniverseToken<T::AccountId>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, DispatchError> {
 		// Check if the tx destination is correct
-		if data.to != omniverse_token.token_id {
-			return Err(Error::<T, I>::WrongDestination);
-		}
+		ensure!(data.to != omniverse_token.token_id, Error::<T, I>::WrongDestination);
 
 		// Check if the sender is honest
-		if T::OmniverseProtocol::is_malicious(data.from) {
-			return Err(Error::<T, I>::UserIsMalicious);
-		}
+		ensure!(T::OmniverseProtocol::is_malicious(data.from), Error::<T, I>::UserIsMalicious);
+
 
 		// Verify the signature
 		let ret = T::OmniverseProtocol::verify_transaction(&data);
 		match ret {
 			Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
 			Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
-			Err(VerifyError::SignatureError) => return Err(Error::<T, I>::ProtocolSignatureError),
-			Err(VerifyError::SignerNotCaller) => return Err(Error::<T, I>::ProtocolSignerNotCaller),
-			Err(VerifyError::NonceError) => return Err(Error::<T, I>::ProtocolNonceError),
+			Err(VerifyError::SignatureError) => return Err(Error::<T, I>::ProtocolSignatureError.into()),
+			Err(VerifyError::SignerNotCaller) => return Err(Error::<T, I>::ProtocolSignerNotCaller.into()),
+			Err(VerifyError::NonceError) => return Err(Error::<T, I>::ProtocolNonceError.into()),
 			_ => (),
 		}
 
@@ -898,7 +894,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let origin = Self::to_account(&data.from)?;
 		// TODO Balance size u32, transfer_data.amount size u128
 		let amount = T::Balance::from(transfer_data.amount as u32);
-		let id = TokenId2AssetId::<T, I>::get(&data.to).ok_or(Error::<T, I>::TokenNotExist)?;
+		let id = TokenId2AssetId::<T, I>::get(&data.to).ok_or(Error::<T, I>::Unknown)?;
 
 		if op_data.op == TRANSFER {
 			Self::omniverse_transfer(omniverse_token, data.from, transfer_data.to, transfer_data.amount)?;
@@ -908,7 +904,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		else if op_data.op == MINT {
 			let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
 			if data.from != omniverse_token.owner_pk {
-				return Err(Error::<T, I>::SignerNotOwner);
+				return Err(Error::<T, I>::SignerNotOwner.into());
 			}
 			Self::omniverse_mint(omniverse_token, mint_data.to, mint_data.amount);
 			Self::do_mint(id, &dest, amount, Some(origin)).map_err(|_| (Error::<T, I>::DoMintFailed))?;
@@ -917,10 +913,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		Ok(FactoryResult::Success)
 	}
 
-	pub(super) fn omniverse_transfer(omniverse_token: OmniverseToken<T::AccountId>, from: [u8; 64], to: [u8; 64], amount: u128) -> Result<(), Error::<T, I>> {
+	pub(super) fn omniverse_transfer(omniverse_token: OmniverseToken<T::AccountId>, from: [u8; 64], to: [u8; 64], amount: u128) -> Result<(), DispatchError> {
 		let from_balance = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
 		if from_balance < amount {
-			return Err(Error::BalanceOverflow);
+			return Err(Error::<T, I>::BalanceLow.into());
 		}
 		else {
 			Tokens::<T, I>::insert(&omniverse_token.token_id, &from, from_balance - amount);
