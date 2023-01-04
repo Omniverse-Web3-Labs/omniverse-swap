@@ -144,8 +144,9 @@ use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
 		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero,
+		IdentifyAccount, Verify,
 	},
-	ArithmeticError, TokenError,
+	ArithmeticError, TokenError, MultiSigner,
 };
 use sp_std::{borrow::Borrow, prelude::*};
 
@@ -174,6 +175,8 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
 	use sp_core::ecdsa::Public;
+	use secp256k1::PublicKey;
+
 	use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol,
 		TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode};
 	use omniverse_token_traits::{OmniverseTokenFactoryHandler, FactoryResult, FactoryError};
@@ -1342,8 +1345,6 @@ pub mod pallet {
 		pub fn create_token(origin: OriginFor<T>, owner_pk: [u8; 64], token_id: Vec<u8>, members: Option<Vec<u8>>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			// let p = Public::from_full(&owner_pk.as_slice()).unwrap();
-
 			// Check if the token exists
 			ensure!(!TokensInfo::<T, I>::contains_key(&token_id), Error::<T, I>::InUse);
 
@@ -1352,6 +1353,49 @@ pub mod pallet {
                 &token_id,
                 OmniverseToken::new(sender.clone(), owner_pk, token_id.clone(), members)
             );
+
+			// Integrate assets
+			// Convert public key to account id
+			let mut owner_pk_full: [u8; 65] = [0; 65];
+			owner_pk_full[1..65].copy_from_slice(&owner_pk);
+			owner_pk_full[0] = 4;
+
+			let public_key = PublicKey::from_slice(&owner_pk_full[..]).expect("public keys must be 33 or 65 bytes, serialized according to SEC 2");
+
+			let public_key_compressed = public_key.serialize();
+
+			// let pb = Public::from_raw(public_key_compressed);
+			// let multi_signer = MultiSigner::Ecdsa(pb);
+			// let account = <<Signature as Verify>::Signer as IdentifyAccount>::into_account(multi_signer);
+
+			// let owner = account.clone();
+			// let issuer = account.clone();
+			// let admin = account.clone();
+
+			// Change assets
+			// let deposit = T::AssetDeposit::get();
+			// T::Currency::reserve(&owner, deposit)?;
+
+			// let id: T::AssetId = 0_u32;
+
+			// Asset::<T, I>::insert(
+			// 	id,
+			// 	AssetDetails {
+			// 		owner: owner.clone(),
+			// 		issuer: admin.clone(),
+			// 		admin: admin.clone(),
+			// 		freezer: admin.clone(),
+			// 		supply: Zero::zero(),
+			// 		deposit,
+			// 		min_balance: 1_000_000_000_000,
+			// 		is_sufficient: false,
+			// 		accounts: 0,
+			// 		sufficients: 0,
+			// 		approvals: 0,
+			// 		is_frozen: false,
+			// 	},
+			// );
+			// Self::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
 
 			// Emit an event.
 			// Self::deposit_event(Event::TokenCreated(sender, token_id));
