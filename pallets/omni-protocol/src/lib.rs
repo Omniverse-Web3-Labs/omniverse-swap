@@ -21,7 +21,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
-	use sp_io::crypto;	
+	use sp_io::crypto;
 	use super::types::{OmniverseTokenProtocol, VerifyResult, VerifyError};
 	use super::traits::OmniverseAccounts;
 
@@ -37,7 +37,7 @@ pub mod pallet {
 		0
 	}
 
-    #[pallet::pallet]
+  #[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);

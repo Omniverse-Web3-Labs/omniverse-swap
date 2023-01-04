@@ -112,7 +112,7 @@ impl OmniverseAccounts for OmniverseProtocol {
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = u64;
+	type Balance = u128;
 	type AssetId = u32;
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<u64>;
@@ -128,6 +128,7 @@ impl Config for Test {
 	type OmniverseProtocol = OmniverseProtocol;
 }
 
+
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -135,13 +136,13 @@ pub enum Hook {
 	Died(u32, u64),
 }
 parameter_types! {
-	static Frozen: HashMap<(u32, u64), u64> = Default::default();
+	static Frozen: HashMap<(u32, u64), u128> = Default::default();
 	static Hooks: Vec<Hook> = Default::default();
 }
 
 pub struct TestFreezer;
-impl FrozenBalance<u32, u64, u64> for TestFreezer {
-	fn frozen_balance(asset: u32, who: &u64) -> Option<u64> {
+impl FrozenBalance<u32, u64, u128> for TestFreezer {
+	fn frozen_balance(asset: u32, who: &u64) -> Option<u128> {
 		Frozen::get().get(&(asset, *who)).cloned()
 	}
 
@@ -153,7 +154,7 @@ impl FrozenBalance<u32, u64, u64> for TestFreezer {
 	}
 }
 
-pub(crate) fn set_frozen_balance(asset: u32, who: u64, amount: u64) {
+pub(crate) fn set_frozen_balance(asset: u32, who: u64, amount: u128) {
 	Frozen::mutate(|v| {
 		v.insert((asset, who), amount);
 	});

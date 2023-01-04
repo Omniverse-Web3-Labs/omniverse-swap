@@ -473,7 +473,7 @@ fn querying_total_supply_should_work() {
 		assert_eq!(Assets::balance(0, 1), 50);
 		assert_eq!(Assets::balance(0, 2), 19);
 		assert_eq!(Assets::balance(0, 3), 31);
-		assert_ok!(Assets::burn(RuntimeOrigin::signed(1), 0, 3, u64::MAX));
+		assert_ok!(Assets::burn(RuntimeOrigin::signed(1), 0, 3, u128::MAX));
 		assert_eq!(Assets::total_supply(0), 69);
 	});
 }
@@ -651,7 +651,7 @@ fn transferring_amount_more_than_available_balance_should_not_work() {
 		assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), 0, 2, 50));
 		assert_eq!(Assets::balance(0, 1), 50);
 		assert_eq!(Assets::balance(0, 2), 50);
-		assert_ok!(Assets::burn(RuntimeOrigin::signed(1), 0, 1, u64::MAX));
+		assert_ok!(Assets::burn(RuntimeOrigin::signed(1), 0, 1, u128::MAX));
 		assert_eq!(Assets::balance(0, 1), 0);
 		assert_noop!(
 			Assets::transfer(RuntimeOrigin::signed(1), 0, 1, 50),
@@ -695,7 +695,7 @@ fn burning_asset_balance_with_positive_balance_should_work() {
 		assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 1, true, 1));
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(1), 0, 1, 100));
 		assert_eq!(Assets::balance(0, 1), 100);
-		assert_ok!(Assets::burn(RuntimeOrigin::signed(1), 0, 1, u64::MAX));
+		assert_ok!(Assets::burn(RuntimeOrigin::signed(1), 0, 1, u128::MAX));
 		assert_eq!(Assets::balance(0, 1), 0);
 	});
 }
@@ -707,7 +707,7 @@ fn burning_asset_balance_with_zero_balance_does_nothing() {
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(1), 0, 1, 100));
 		assert_eq!(Assets::balance(0, 2), 0);
 		assert_noop!(
-			Assets::burn(RuntimeOrigin::signed(1), 0, 2, u64::MAX),
+			Assets::burn(RuntimeOrigin::signed(1), 0, 2, u128::MAX),
 			Error::<Test>::NoAccount
 		);
 		assert_eq!(Assets::balance(0, 2), 0);
@@ -1085,7 +1085,7 @@ fn querying_allowance_should_work() {
 #[test]
 fn transfer_large_asset() {
 	new_test_ext().execute_with(|| {
-		let amount = u64::pow(2, 63) + 2;
+		let amount = u128::pow(2, 127) + 2;
 		assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 1, true, 1));
 		assert_ok!(Assets::mint(RuntimeOrigin::signed(1), 0, 1, amount));
 		assert_ok!(Assets::transfer(RuntimeOrigin::signed(1), 0, 2, amount - 1));
