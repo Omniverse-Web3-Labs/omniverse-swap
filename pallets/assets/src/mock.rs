@@ -97,11 +97,11 @@ impl OmniverseAccounts for OmniverseProtocol {
 		Ok(VerifyResult::Success)
 	}
 
-    fn get_transaction_count(pk: [u8; 64]) -> u128 {
+    fn get_transaction_count(_pk: [u8; 64]) -> u128 {
 		0
 	}
 
-    fn is_malicious(pk: [u8; 64]) -> bool {
+    fn is_malicious(_pk: [u8; 64]) -> bool {
 		false
 	}
 
@@ -154,21 +154,21 @@ impl FrozenBalance<u32, u64, u128> for TestFreezer {
 	}
 }
 
-pub(crate) fn set_frozen_balance(asset: u32, who: u64, amount: u128) {
-	Frozen::mutate(|v| {
-		v.insert((asset, who), amount);
-	});
-}
+// pub(crate) fn set_frozen_balance(asset: u32, who: u64, amount: u128) {
+// 	Frozen::mutate(|v| {
+// 		v.insert((asset, who), amount);
+// 	});
+// }
 
-pub(crate) fn clear_frozen_balance(asset: u32, who: u64) {
-	Frozen::mutate(|v| {
-		v.remove(&(asset, who));
-	});
-}
+// pub(crate) fn clear_frozen_balance(asset: u32, who: u64) {
+// 	Frozen::mutate(|v| {
+// 		v.remove(&(asset, who));
+// 	});
+// }
 
-pub(crate) fn hooks() -> Vec<Hook> {
-	Hooks::get().clone()
-}
+// pub(crate) fn hooks() -> Vec<Hook> {
+// 	Hooks::get().clone()
+// }
 
 pub(crate) fn take_hooks() -> Vec<Hook> {
 	Hooks::take()
