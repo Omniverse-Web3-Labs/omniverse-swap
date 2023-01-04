@@ -19,8 +19,12 @@
 
 use super::*;
 use frame_support::{traits::Get, BoundedVec};
-use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol,
-	TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode};
+use pallet_omniverse_protocol::{
+	types::{
+		VerifyResult, VerifyError, OmniverseTokenProtocol,
+	TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode},
+	traits::OmniverseAccounts
+};
 use codec::Decode;
 use secp256k1::PublicKey;
 use sp_runtime::traits::BlakeTwo256;

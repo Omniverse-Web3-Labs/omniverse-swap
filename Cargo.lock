@@ -3841,18 +3841,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "omniverse-protocol-traits"
-version = "4.0.0-dev"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde_json",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3889,8 +3877,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "omniverse-protocol-traits",
  "pallet-balances",
+ "pallet-omniverse-protocol",
  "parity-scale-codec",
  "scale-info",
  "secp256k1 0.24.1",
@@ -3976,7 +3964,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "omniverse-protocol-traits",
  "parity-scale-codec",
  "scale-info",
  "secp256k1 0.25.0",
@@ -3994,8 +3981,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "omniverse-protocol-traits",
  "pallet-assets",
+ "pallet-omniverse-protocol",
  "parity-scale-codec",
  "scale-info",
  "secp256k1 0.25.0",

@@ -179,8 +179,9 @@ pub mod pallet {
 	use sp_core::Hasher;
 	use frame_support::sp_runtime::traits::{Saturating, One};
 
-	use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol,
-		TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode};
+	use pallet_omniverse_protocol::{VerifyResult, VerifyError, OmniverseTokenProtocol,
+		TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode,
+		traits::OmniverseAccounts};
 	use traits::{OmniverseTokenFactoryHandler};
 
 	#[pallet::pallet]

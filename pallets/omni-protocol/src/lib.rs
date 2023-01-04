@@ -8,14 +8,23 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod types;
+pub use types::*;
+
+pub mod functions;
+
+pub mod traits;
+
 #[frame_support::pallet]
 pub mod pallet {    
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
-	use sp_io::crypto;
-	use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError, get_transaction_hash};
+	use sp_io::crypto;	
+	use frame_support::dispatch::DispatchError;
+	use super::types::{OmniverseTokenProtocol, VerifyResult, VerifyError};
+	use super::traits::OmniverseAccounts;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -110,7 +119,7 @@ pub mod pallet {
 		fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
 			let nonce = TransactionCount::<T>::get(&data.from);
 	
-			let tx_hash_bytes = get_transaction_hash(&data);
+			let tx_hash_bytes = super::functions::get_transaction_hash(&data);
 
 			let recoverd_pk = crypto::secp256k1_ecdsa_recover(&data.signature, &tx_hash_bytes).map_err(|_| VerifyError::SignatureError)?;
 
@@ -132,7 +141,7 @@ pub mod pallet {
 			else if nonce > data.nonce {
 				// Check conflicts
 				let his_tx = TransactionRecorder::<T>::get(&data.from, &data.nonce).unwrap();
-				let his_tx_hash = get_transaction_hash(&his_tx.tx_data);
+				let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data);
 				if his_tx_hash != tx_hash_bytes {
 					let omni_tx = OmniverseTx::new(data.clone());
 					let evil_tx = EvilTxData::new(omni_tx, nonce);

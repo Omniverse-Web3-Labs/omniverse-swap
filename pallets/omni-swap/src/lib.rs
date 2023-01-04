@@ -20,7 +20,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	// use sp_runtime::traits::TrailingZeroInput;
-	use omniverse_protocol_traits::{OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, TRANSFER};
+	use pallet_omniverse_protocol::{OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, TRANSFER};
 	use pallet_assets::traits::{OmniverseTokenFactoryHandler};
 
 	#[pallet::pallet]
