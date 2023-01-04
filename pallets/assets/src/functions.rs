@@ -897,7 +897,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let dest = Self::to_account(&transfer_data.to)?;
 		let origin = Self::to_account(&data.from)?;
 		// TODO Balance size u32, transfer_data.amount size u128
-		let amount = T::Balance::from(transfer_data.amount as u32);
+		let amount = T::Balance::from(transfer_data.amount);
 		let id = TokenId2AssetId::<T, I>::get(&data.to).ok_or(Error::<T, I>::Unknown)?;
 
 		if op_data.op == TRANSFER {
