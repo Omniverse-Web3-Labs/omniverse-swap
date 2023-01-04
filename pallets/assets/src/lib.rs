@@ -156,7 +156,6 @@ use frame_support::{
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{
 		tokens::{fungibles, DepositConsequence, WithdrawConsequence},
-		BalanceStatus::Reserved,
 		Currency, ReservableCurrency, StoredMap,
 	},
 };
@@ -554,10 +553,10 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			admin: AccountIdLookupOf<T>,
-			min_balance: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_admin: AccountIdLookupOf<T>,
+			_min_balance: T::Balance,
 		) -> DispatchResult {
 			// let owner = ensure_signed(origin)?;
 			// let admin = T::Lookup::lookup(admin)?;
@@ -611,11 +610,11 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::force_create())]
 		pub fn force_create(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			owner: AccountIdLookupOf<T>,
-			is_sufficient: bool,
-			#[pallet::compact] min_balance: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_owner: AccountIdLookupOf<T>,
+			_is_sufficient: bool,
+			#[pallet::compact] _min_balance: T::Balance,
 		) -> DispatchResult {
 			// T::ForceOrigin::ensure_origin(origin)?;
 			// let owner = T::Lookup::lookup(owner)?;
@@ -642,14 +641,14 @@ pub mod pallet {
 		/// - `s = witness.sufficients`
 		/// - `a = witness.approvals`
 		#[pallet::weight(T::WeightInfo::destroy(
-			witness.accounts.saturating_sub(witness.sufficients),
- 			witness.sufficients,
- 			witness.approvals,
+			_witness.accounts.saturating_sub(_witness.sufficients),
+ 			_witness.sufficients,
+ 			_witness.approvals,
  		))]
 		pub fn destroy(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			witness: DestroyWitness,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_witness: DestroyWitness,
 		) -> DispatchResultWithPostInfo {
 			// let maybe_check_owner = match T::ForceOrigin::try_origin(origin) {
 			// 	Ok(_) => None,
@@ -680,10 +679,10 @@ pub mod pallet {
 		/// Modes: Pre-existing balance of `beneficiary`; Account pre-existence of `beneficiary`.
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn mint(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			beneficiary: AccountIdLookupOf<T>,
-			#[pallet::compact] amount: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_beneficiary: AccountIdLookupOf<T>,
+			#[pallet::compact] _amount: T::Balance,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 			// let beneficiary = T::Lookup::lookup(beneficiary)?;
@@ -709,10 +708,10 @@ pub mod pallet {
 		/// Modes: Post-existence of `who`; Pre & post Zombie-status of `who`.
 		#[pallet::weight(T::WeightInfo::burn())]
 		pub fn burn(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			who: AccountIdLookupOf<T>,
-			#[pallet::compact] amount: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_who: AccountIdLookupOf<T>,
+			#[pallet::compact] _amount: T::Balance,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 			// let who = T::Lookup::lookup(who)?;
@@ -743,10 +742,10 @@ pub mod pallet {
 		/// `target`.
 		#[pallet::weight(T::WeightInfo::transfer())]
 		pub fn transfer(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			target: AccountIdLookupOf<T>,
-			#[pallet::compact] amount: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_target: AccountIdLookupOf<T>,
+			#[pallet::compact] _amount: T::Balance,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 			// let dest = T::Lookup::lookup(target)?;
@@ -776,10 +775,10 @@ pub mod pallet {
 		/// `target`.
 		#[pallet::weight(T::WeightInfo::transfer_keep_alive())]
 		pub fn transfer_keep_alive(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			target: AccountIdLookupOf<T>,
-			#[pallet::compact] amount: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_target: AccountIdLookupOf<T>,
+			#[pallet::compact] _amount: T::Balance,
 		) -> DispatchResult {
 			// let source = ensure_signed(origin)?;
 			// let dest = T::Lookup::lookup(target)?;
@@ -810,11 +809,11 @@ pub mod pallet {
 		/// `dest`.
 		#[pallet::weight(T::WeightInfo::force_transfer())]
 		pub fn force_transfer(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			source: AccountIdLookupOf<T>,
-			dest: AccountIdLookupOf<T>,
-			#[pallet::compact] amount: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_source: AccountIdLookupOf<T>,
+			_dest: AccountIdLookupOf<T>,
+			#[pallet::compact] _amount: T::Balance,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 			// let source = T::Lookup::lookup(source)?;
@@ -837,9 +836,9 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::freeze())]
 		pub fn freeze(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			who: AccountIdLookupOf<T>,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_who: AccountIdLookupOf<T>,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 
@@ -869,9 +868,9 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::thaw())]
 		pub fn thaw(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			who: AccountIdLookupOf<T>,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_who: AccountIdLookupOf<T>,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 
@@ -900,8 +899,8 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::freeze_asset())]
 		pub fn freeze_asset(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 
@@ -928,8 +927,8 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::thaw_asset())]
 		pub fn thaw_asset(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 
@@ -958,9 +957,9 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::transfer_ownership())]
 		pub fn transfer_ownership(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			owner: AccountIdLookupOf<T>,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_owner: AccountIdLookupOf<T>,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 			// let owner = T::Lookup::lookup(owner)?;
@@ -1001,11 +1000,11 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::set_team())]
 		pub fn set_team(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			issuer: AccountIdLookupOf<T>,
-			admin: AccountIdLookupOf<T>,
-			freezer: AccountIdLookupOf<T>,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_issuer: AccountIdLookupOf<T>,
+			_admin: AccountIdLookupOf<T>,
+			_freezer: AccountIdLookupOf<T>,
 		) -> DispatchResult {
 			// let origin = ensure_signed(origin)?;
 			// let issuer = T::Lookup::lookup(issuer)?;
@@ -1188,15 +1187,15 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::force_asset_status())]
 		pub fn force_asset_status(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			owner: AccountIdLookupOf<T>,
-			issuer: AccountIdLookupOf<T>,
-			admin: AccountIdLookupOf<T>,
-			freezer: AccountIdLookupOf<T>,
-			#[pallet::compact] min_balance: T::Balance,
-			is_sufficient: bool,
-			is_frozen: bool,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_owner: AccountIdLookupOf<T>,
+			_issuer: AccountIdLookupOf<T>,
+			_admin: AccountIdLookupOf<T>,
+			_freezer: AccountIdLookupOf<T>,
+			#[pallet::compact] _min_balance: T::Balance,
+			_is_sufficient: bool,
+			_is_frozen: bool,
 		) -> DispatchResult {
 			// T::ForceOrigin::ensure_origin(origin)?;
 
@@ -1240,10 +1239,10 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::approve_transfer())]
 		pub fn approve_transfer(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			delegate: AccountIdLookupOf<T>,
-			#[pallet::compact] amount: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_delegate: AccountIdLookupOf<T>,
+			#[pallet::compact] _amount: T::Balance,
 		) -> DispatchResult {
 			// let owner = ensure_signed(origin)?;
 			// let delegate = T::Lookup::lookup(delegate)?;
@@ -1266,9 +1265,9 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::cancel_approval())]
 		pub fn cancel_approval(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			delegate: AccountIdLookupOf<T>,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_delegate: AccountIdLookupOf<T>,
 		) -> DispatchResult {
 			// let owner = ensure_signed(origin)?;
 			// let delegate = T::Lookup::lookup(delegate)?;
@@ -1300,10 +1299,10 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::force_cancel_approval())]
 		pub fn force_cancel_approval(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			owner: AccountIdLookupOf<T>,
-			delegate: AccountIdLookupOf<T>,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_owner: AccountIdLookupOf<T>,
+			_delegate: AccountIdLookupOf<T>,
 		) -> DispatchResult {
 			// let mut d = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
 			// T::ForceOrigin::try_origin(origin)
@@ -1348,11 +1347,11 @@ pub mod pallet {
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::transfer_approved())]
 		pub fn transfer_approved(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			owner: AccountIdLookupOf<T>,
-			destination: AccountIdLookupOf<T>,
-			#[pallet::compact] amount: T::Balance,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_owner: AccountIdLookupOf<T>,
+			_destination: AccountIdLookupOf<T>,
+			#[pallet::compact] _amount: T::Balance,
 		) -> DispatchResult {
 			// let delegate = ensure_signed(origin)?;
 			// let owner = T::Lookup::lookup(owner)?;
@@ -1371,7 +1370,7 @@ pub mod pallet {
 		///
 		/// Emits `Touched` event when successful.
 		#[pallet::weight(T::WeightInfo::mint())]
-		pub fn touch(origin: OriginFor<T>, #[pallet::compact] id: T::AssetId) -> DispatchResult {
+		pub fn touch(_origin: OriginFor<T>, #[pallet::compact] _id: T::AssetId) -> DispatchResult {
 			// Self::do_touch(id, ensure_signed(origin)?)?;
 			Err(Error::<T, I>::Unsupport.into())
 		}
@@ -1386,9 +1385,9 @@ pub mod pallet {
 		/// Emits `Refunded` event when successful.
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn refund(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			allow_burn: bool,
+			_origin: OriginFor<T>,
+			#[pallet::compact] _id: T::AssetId,
+			_allow_burn: bool,
 		) -> DispatchResult {
 			// Self::do_refund(id, ensure_signed(origin)?, allow_burn)?;
 			Err(Error::<T, I>::Unsupport.into())

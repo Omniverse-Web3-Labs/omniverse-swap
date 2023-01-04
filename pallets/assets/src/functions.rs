@@ -307,48 +307,48 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	}
 
 	/// Creates a account for `who` to hold asset `id` with a zero balance and takes a deposit.
-	pub(super) fn do_touch(id: T::AssetId, who: T::AccountId) -> DispatchResult {
-		ensure!(!Account::<T, I>::contains_key(id, &who), Error::<T, I>::AlreadyExists);
-		let deposit = T::AssetAccountDeposit::get();
-		let mut details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
-		let reason = Self::new_account(&who, &mut details, Some(deposit))?;
-		T::Currency::reserve(&who, deposit)?;
-		Asset::<T, I>::insert(&id, details);
-		Account::<T, I>::insert(
-			id,
-			&who,
-			AssetAccountOf::<T, I> {
-				balance: Zero::zero(),
-				is_frozen: false,
-				reason,
-				extra: T::Extra::default(),
-			},
-		);
-		Ok(())
-	}
+	// pub(super) fn do_touch(id: T::AssetId, who: T::AccountId) -> DispatchResult {
+	// 	ensure!(!Account::<T, I>::contains_key(id, &who), Error::<T, I>::AlreadyExists);
+	// 	let deposit = T::AssetAccountDeposit::get();
+	// 	let mut details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+	// 	let reason = Self::new_account(&who, &mut details, Some(deposit))?;
+	// 	T::Currency::reserve(&who, deposit)?;
+	// 	Asset::<T, I>::insert(&id, details);
+	// 	Account::<T, I>::insert(
+	// 		id,
+	// 		&who,
+	// 		AssetAccountOf::<T, I> {
+	// 			balance: Zero::zero(),
+	// 			is_frozen: false,
+	// 			reason,
+	// 			extra: T::Extra::default(),
+	// 		},
+	// 	);
+	// 	Ok(())
+	// }
 
 	/// Returns a deposit, destroying an asset-account.
-	pub(super) fn do_refund(id: T::AssetId, who: T::AccountId, allow_burn: bool) -> DispatchResult {
-		let mut account = Account::<T, I>::get(id, &who).ok_or(Error::<T, I>::NoDeposit)?;
-		let deposit = account.reason.take_deposit().ok_or(Error::<T, I>::NoDeposit)?;
-		let mut details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+	// pub(super) fn do_refund(id: T::AssetId, who: T::AccountId, allow_burn: bool) -> DispatchResult {
+	// 	let mut account = Account::<T, I>::get(id, &who).ok_or(Error::<T, I>::NoDeposit)?;
+	// 	let deposit = account.reason.take_deposit().ok_or(Error::<T, I>::NoDeposit)?;
+	// 	let mut details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
 
-		ensure!(account.balance.is_zero() || allow_burn, Error::<T, I>::WouldBurn);
-		ensure!(!details.is_frozen, Error::<T, I>::Frozen);
-		ensure!(!account.is_frozen, Error::<T, I>::Frozen);
+	// 	ensure!(account.balance.is_zero() || allow_burn, Error::<T, I>::WouldBurn);
+	// 	ensure!(!details.is_frozen, Error::<T, I>::Frozen);
+	// 	ensure!(!account.is_frozen, Error::<T, I>::Frozen);
 
-		T::Currency::unreserve(&who, deposit);
+	// 	T::Currency::unreserve(&who, deposit);
 
-		if let Remove = Self::dead_account(&who, &mut details, &account.reason, false) {
-			Account::<T, I>::remove(id, &who);
-		} else {
-			debug_assert!(false, "refund did not result in dead account?!");
-		}
-		Asset::<T, I>::insert(&id, details);
-		// Executing a hook here is safe, since it is not in a `mutate`.
-		T::Freezer::died(id, &who);
-		Ok(())
-	}
+	// 	if let Remove = Self::dead_account(&who, &mut details, &account.reason, false) {
+	// 		Account::<T, I>::remove(id, &who);
+	// 	} else {
+	// 		debug_assert!(false, "refund did not result in dead account?!");
+	// 	}
+	// 	Asset::<T, I>::insert(&id, details);
+	// 	// Executing a hook here is safe, since it is not in a `mutate`.
+	// 	T::Freezer::died(id, &who);
+	// 	Ok(())
+	// }
 
 	/// Increases the asset `id` balance of `beneficiary` by `amount`.
 	///

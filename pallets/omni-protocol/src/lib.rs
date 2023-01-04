@@ -82,7 +82,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 	}
 
-	const CHAIN_ID: u8 = 0_u8;
+	const CHAIN_ID: u8 = 1_u8;
 	
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 	pub struct OmniverseTx {
