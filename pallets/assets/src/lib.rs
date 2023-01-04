@@ -532,7 +532,6 @@ pub mod pallet {
 		ProtocolSignerNotCaller,
 		ProtocolSignatureError,
 		ProtocolNonceError,
-		BalanceError,
 	}
 
 	#[pallet::call]

@@ -29,6 +29,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use pallet_omniverse_protocol::{traits::OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -84,9 +85,34 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 }
 
+#[derive(Default)]
+pub struct OmniverseProtocol();
+
+impl OmniverseAccounts for OmniverseProtocol {
+	fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+		if data.signature == [0; 65] {
+			return Err(VerifyError::SignatureError);
+		}
+
+		Ok(VerifyResult::Success)
+	}
+
+    fn get_transaction_count(pk: [u8; 64]) -> u128 {
+		0
+	}
+
+    fn is_malicious(pk: [u8; 64]) -> bool {
+		false
+	}
+
+    fn get_chain_id() -> u8 {
+		1
+	}
+}
+
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = u128;
+	type Balance = u64;
 	type AssetId = u32;
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<u64>;
@@ -99,6 +125,7 @@ impl Config for Test {
 	type Freezer = TestFreezer;
 	type WeightInfo = ();
 	type Extra = ();
+	type OmniverseProtocol = OmniverseProtocol;
 }
 
 use std::collections::HashMap;

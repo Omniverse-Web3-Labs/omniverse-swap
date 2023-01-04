@@ -30,7 +30,9 @@ pallet-omniverse-protocol = { version = "4.0.0-dev", default-features = false, p
 [dev-dependencies]
 sp-std = { version = "4.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.31" }
 sp-io = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.31" }
-pallet-balances = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.31" }
+secp256k1 = { version = "0.24.0", features = ["rand", "global-context", "recovery"] }
+sha3 = { version = "0.10.6" }
+pallet-balances = { version = "4.0.0-dev", default-features = true, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.31" }
 
 [features]
 default = ["std"]
