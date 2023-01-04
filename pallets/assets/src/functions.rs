@@ -19,6 +19,13 @@
 
 use super::*;
 use frame_support::{traits::Get, BoundedVec};
+use omniverse_protocol_traits::{VerifyResult, VerifyError, OmniverseAccounts, OmniverseTokenProtocol,
+	TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode};
+use codec::Decode;
+use omniverse_token_traits::FactoryResult;
+use secp256k1::PublicKey;
+use sp_runtime::traits::BlakeTwo256;
+use sp_core::Hasher;
 
 #[must_use]
 pub(super) enum DeadConsequence {
@@ -860,4 +867,82 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			Ok(())
 		})
 	}
+
+	pub(super) fn handle_transaction(omniverse_token: OmniverseToken<T::AccountId>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, Error::<T, I>> {
+		// Check if the tx destination is correct
+		if data.to != omniverse_token.token_id {
+			return Err(Error::<T, I>::WrongDestination);
+		}
+
+		// Check if the sender is honest
+		if T::OmniverseProtocol::is_malicious(data.from) {
+			return Err(Error::<T, I>::UserIsMalicious);
+		}
+
+		// Verify the signature
+		let ret = T::OmniverseProtocol::verify_transaction(&data);
+		match ret {
+			Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
+			Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
+			Err(VerifyError::SignatureError) => return Err(Error::<T, I>::ProtocolSignatureError),
+			Err(VerifyError::SignerNotCaller) => return Err(Error::<T, I>::ProtocolSignerNotCaller),
+			Err(VerifyError::NonceError) => return Err(Error::<T, I>::ProtocolNonceError),
+			_ => (),
+		}
+
+		// Execute
+		let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
+		let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+		// Convert public key to account id
+		let dest = Self::to_account(&transfer_data.to)?;
+		let origin = Self::to_account(&data.from)?;
+		// TODO Balance size u32, transfer_data.amount size u128
+		let amount = T::Balance::from(transfer_data.amount as u32);
+		let id = TokenId2AssetId::<T, I>::get(&data.to).ok_or(Error::<T, I>::TokenNotExist)?;
+
+		if op_data.op == TRANSFER {
+			Self::omniverse_transfer(omniverse_token, data.from, transfer_data.to, transfer_data.amount)?;
+			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
+			Self::do_transfer(id, &origin, &dest, amount, None, f).map_err(|_| (Error::<T, I>::DoTransferFailed))?;
+		}
+		else if op_data.op == MINT {
+			let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+			if data.from != omniverse_token.owner_pk {
+				return Err(Error::<T, I>::SignerNotOwner);
+			}
+			Self::omniverse_mint(omniverse_token, mint_data.to, mint_data.amount);
+			Self::do_mint(id, &dest, amount, Some(origin)).map_err(|_| (Error::<T, I>::DoMintFailed))?;
+		}
+
+		Ok(FactoryResult::Success)
+	}
+
+	pub(super) fn omniverse_transfer(omniverse_token: OmniverseToken<T::AccountId>, from: [u8; 64], to: [u8; 64], amount: u128) -> Result<(), Error::<T, I>> {
+		let from_balance = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
+		if from_balance < amount {
+			return Err(Error::BalanceOverflow);
+		}
+		else {
+			Tokens::<T, I>::insert(&omniverse_token.token_id, &from, from_balance - amount);
+			let to_balance = Tokens::<T, I>::get(&omniverse_token.token_id, &to);
+			Tokens::<T, I>::insert(&omniverse_token.token_id, &to, to_balance + amount);
+		}
+		Ok(())
+	}
+
+	pub(super) fn omniverse_mint(omniverse_token: OmniverseToken<T::AccountId>, to: [u8; 64], amount: u128) {
+		let balance = Tokens::<T, I>::get(&omniverse_token.token_id, &to);
+		Tokens::<T, I>::insert(&omniverse_token.token_id, &to, balance + amount);
+	}
+
+	pub(super) fn to_account(public_key: &[u8; 64]) -> Result<T::AccountId, Error<T, I>> {
+		let mut pk_full: [u8; 65] = [0; 65];
+		pk_full[1..65].copy_from_slice(public_key);
+		pk_full[0] = 4;
+		let public_key = PublicKey::from_slice(&pk_full[..]).map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+		let public_key_compressed = public_key.serialize();
+		let hash = BlakeTwo256::hash(&public_key_compressed);
+		Ok(T::AccountId::decode(&mut &hash[..]).unwrap())
+	}
+
 }

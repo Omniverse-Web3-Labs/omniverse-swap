@@ -324,8 +324,12 @@ pub mod pallet {
 	pub type CurrentAssetId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, Vec<u8>, T::AssetId>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_id)]
-	pub type TokenId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, T::AssetId, Vec<u8>>;
+	#[pallet::getter(fn asset_id_2_token_id)]
+	pub type AssetId2TokenId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, T::AssetId, Vec<u8>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn token_id_2_asset_id)]
+	pub type TokenId2AssetId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, Vec<u8>, T::AssetId>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
@@ -513,6 +517,20 @@ pub mod pallet {
 		NoDeposit,
 		/// The operation would result in funds being burned.
 		WouldBurn,
+
+		DoTransferFailed,
+		DoMintFailed,
+
+		/// decode
+		SerializePublicKeyFailed,
+		TokenNotExist,
+    WrongDestination,
+    UserIsMalicious,
+    BalanceOverflow,
+    SignerNotOwner,
+    ProtocolSignerNotCaller,
+    ProtocolSignatureError,
+    ProtocolNonceError,
 	}
 
 	#[pallet::call]
@@ -1371,7 +1389,7 @@ pub mod pallet {
 			owner_pk_full[1..65].copy_from_slice(&owner_pk);
 			owner_pk_full[0] = 4;
 
-			let public_key = PublicKey::from_slice(&owner_pk_full[..]).expect("public keys must be 33 or 65 bytes, serialized according to SEC 2");
+			let public_key = PublicKey::from_slice(&owner_pk_full[..]).map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 
 			let public_key_compressed = public_key.serialize();
 			let hash = BlakeTwo256::hash(&public_key_compressed);
@@ -1388,7 +1406,9 @@ pub mod pallet {
 				id.saturating_inc();
 			}
 
-			
+			AssetId2TokenId::<T, I>::insert(&id, token_id.clone());
+			TokenId2AssetId::<T, I>::insert(&token_id, id.clone());
+
 			Asset::<T, I>::insert(
 				id,
 				AssetDetails {
@@ -1454,11 +1474,12 @@ pub mod pallet {
 	impl<T: Config<I>, I: 'static> OmniverseTokenFactoryHandler for Pallet<T, I> {
 		fn send_transaction_external(token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, FactoryError> {
 			// Check if the token exists.
-            let mut token = TokensInfo::<T, I>::get(&token_id).ok_or(FactoryError::TokenNotExist)?;
+			let token = TokensInfo::<T, I>::get(&token_id).ok_or(FactoryError::TokenNotExist)?;
 
-            token.handle_transaction::<T, I>(&data)?;
+			// token.handle_transaction::<T, I>(&data)?;
+			Self::handle_transaction(token, data).map_err(|_| FactoryError::TokenNotExist)?;
 
-            // Self::deposit_event(Event::TransactionSent(token_id, data.from));
+      // Self::deposit_event(Event::TransactionSent(token_id, data.from));
 
 			Ok(FactoryResult::Success)
 		}
@@ -1466,9 +1487,9 @@ pub mod pallet {
 
 	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 	pub struct OmniverseToken<AccountId> {
-		owner: AccountId,
-		owner_pk: [u8; 64],
-		token_id: Vec<u8>,
+		pub owner: AccountId,
+		pub owner_pk: [u8; 64],
+		pub token_id: Vec<u8>,
 		pub members: Vec<u8>
 	}
 
@@ -1482,62 +1503,62 @@ pub mod pallet {
 			}
 		}
 		
-		fn handle_transaction<T: Config<I>, I: 'static>(&mut self, data: &OmniverseTokenProtocol) -> Result<FactoryResult, FactoryError> {
-			// Check if the tx destination is correct
-			if data.to != self.token_id {
-				return Err(FactoryError::WrongDestination);
-			}
+		// fn handle_transaction<T: Config<I>, I: 'static>(&mut self, data: &OmniverseTokenProtocol) -> Result<FactoryResult, FactoryError> {
+		// 	// Check if the tx destination is correct
+		// 	if data.to != self.token_id {
+		// 		return Err(FactoryError::WrongDestination);
+		// 	}
 	
-			// Check if the sender is honest
-			if T::OmniverseProtocol::is_malicious(data.from) {
-				return Err(FactoryError::UserIsMalicious);
-			}
+		// 	// Check if the sender is honest
+		// 	if T::OmniverseProtocol::is_malicious(data.from) {
+		// 		return Err(FactoryError::UserIsMalicious);
+		// 	}
 	
-			// Verify the signature
-			let ret = T::OmniverseProtocol::verify_transaction(&data);
-			match ret {
-				Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
-				Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
-				Err(VerifyError::SignatureError) => return Err(FactoryError::ProtocolSignatureError),
-				Err(VerifyError::SignerNotCaller) => return Err(FactoryError::ProtocolSignerNotCaller),
-				Err(VerifyError::NonceError) => return Err(FactoryError::ProtocolNonceError),
-				_ => (),
-			}
+		// 	// Verify the signature
+		// 	let ret = T::OmniverseProtocol::verify_transaction(&data);
+		// 	match ret {
+		// 		Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
+		// 		Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
+		// 		Err(VerifyError::SignatureError) => return Err(FactoryError::ProtocolSignatureError),
+		// 		Err(VerifyError::SignerNotCaller) => return Err(FactoryError::ProtocolSignerNotCaller),
+		// 		Err(VerifyError::NonceError) => return Err(FactoryError::ProtocolNonceError),
+		// 		_ => (),
+		// 	}
 	
-			// Execute
-			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-			if op_data.op == TRANSFER {
-				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				self.omniverse_transfer::<T, I>(data.from, transfer_data.to, transfer_data.amount)?;
-			}
-			else if op_data.op == MINT {
-				let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-				if data.from != self.owner_pk {
-					return Err(FactoryError::SignerNotOwner);
-				}
-				self.omniverse_mint::<T, I>(mint_data.to, mint_data.amount);
-			}
+		// 	// Execute
+		// 	let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
+		// 	if op_data.op == TRANSFER {
+		// 		let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+		// 		self.omniverse_transfer::<T, I>(data.from, transfer_data.to, transfer_data.amount)?;
+		// 	}
+		// 	else if op_data.op == MINT {
+		// 		let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+		// 		if data.from != self.owner_pk {
+		// 			return Err(FactoryError::SignerNotOwner);
+		// 		}
+		// 		self.omniverse_mint::<T, I>(mint_data.to, mint_data.amount);
+		// 	}
 
-			Ok(FactoryResult::Success)
-		}
+		// 	Ok(FactoryResult::Success)
+		// }
 	
-		fn omniverse_transfer<T: Config<I>, I: 'static>(&mut self, from: [u8; 64], to: [u8; 64], amount: u128) -> Result<(), FactoryError> {
-			let from_balance = Tokens::<T, I>::get(&self.token_id, &from);
-			if from_balance < amount {
-				return Err(FactoryError::BalanceOverflow);
-			}
-			else {
-				Tokens::<T, I>::insert(&self.token_id, &from, from_balance - amount);
-				let to_balance = Tokens::<T, I>::get(&self.token_id, &to);
-				Tokens::<T, I>::insert(&self.token_id, &to, to_balance + amount);
-			}
-			Ok(())
-		}
+		// fn omniverse_transfer<T: Config<I>, I: 'static>(&mut self, from: [u8; 64], to: [u8; 64], amount: u128) -> Result<(), FactoryError> {
+		// 	let from_balance = Tokens::<T, I>::get(&self.token_id, &from);
+		// 	if from_balance < amount {
+		// 		return Err(FactoryError::BalanceOverflow);
+		// 	}
+		// 	else {
+		// 		Tokens::<T, I>::insert(&self.token_id, &from, from_balance - amount);
+		// 		let to_balance = Tokens::<T, I>::get(&self.token_id, &to);
+		// 		Tokens::<T, I>::insert(&self.token_id, &to, to_balance + amount);
+		// 	}
+		// 	Ok(())
+		// }
 	
-		fn omniverse_mint<T: Config<I>, I: 'static>(&mut self, to: [u8; 64], amount: u128) {
-			let balance = Tokens::<T, I>::get(&self.token_id, &to);
-			Tokens::<T, I>::insert(&self.token_id, &to, balance + amount);
-		}
+		// fn omniverse_mint<T: Config<I>, I: 'static>(&mut self, to: [u8; 64], amount: u128) {
+		// 	let balance = Tokens::<T, I>::get(&self.token_id, &to);
+		// 	Tokens::<T, I>::insert(&self.token_id, &to, balance + amount);
+		// }
 	
 		fn add_members(&mut self, members: Vec<u8>) {
 			for m in &members {
