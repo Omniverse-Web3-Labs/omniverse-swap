@@ -29,7 +29,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-
+use pallet_omniverse_protocol::{OmniverseTokenProtocol, traits::OmniverseAccounts, VerifyResult, VerifyError};
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -86,7 +86,7 @@ impl pallet_balances::Config for Test {
 
 impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = u64;
+	type Balance = u128;
 	type AssetId = u32;
 	type Currency = Balances;
 	type ForceOrigin = frame_system::EnsureRoot<u64>;
@@ -99,7 +99,34 @@ impl Config for Test {
 	type Freezer = TestFreezer;
 	type WeightInfo = ();
 	type Extra = ();
+	type OmniverseProtocol = OmniverseProtocol;
 }
+
+#[derive(Default)]
+pub struct OmniverseProtocol();
+
+impl OmniverseAccounts for OmniverseProtocol {
+	fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+		if data.signature == [0; 65] {
+			return Err(VerifyError::SignatureError);
+		}
+
+		Ok(VerifyResult::Success)
+	}
+
+    fn get_transaction_count(_pk: [u8; 64]) -> u128 {
+		0
+	}
+
+    fn is_malicious(_pk: [u8; 64]) -> bool {
+		false
+	}
+
+    fn get_chain_id() -> u8 {
+		1
+	}
+}
+
 
 use std::collections::HashMap;
 
@@ -108,13 +135,13 @@ pub enum Hook {
 	Died(u32, u64),
 }
 parameter_types! {
-	static Frozen: HashMap<(u32, u64), u64> = Default::default();
+	static Frozen: HashMap<(u32, u64), u128> = Default::default();
 	static Hooks: Vec<Hook> = Default::default();
 }
 
 pub struct TestFreezer;
-impl FrozenBalance<u32, u64, u64> for TestFreezer {
-	fn frozen_balance(asset: u32, who: &u64) -> Option<u64> {
+impl FrozenBalance<u32, u64, u128> for TestFreezer {
+	fn frozen_balance(asset: u32, who: &u64) -> Option<u128> {
 		Frozen::get().get(&(asset, *who)).cloned()
 	}
 
@@ -126,7 +153,7 @@ impl FrozenBalance<u32, u64, u64> for TestFreezer {
 	}
 }
 
-pub(crate) fn set_frozen_balance(asset: u32, who: u64, amount: u64) {
+pub(crate) fn set_frozen_balance(asset: u32, who: u64, amount: u128) {
 	Frozen::mutate(|v| {
 		v.insert((asset, who), amount);
 	});

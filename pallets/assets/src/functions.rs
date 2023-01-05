@@ -29,6 +29,7 @@ use codec::Decode;
 use secp256k1::PublicKey;
 use sp_runtime::traits::BlakeTwo256;
 use sp_core::Hasher;
+use sp_std::vec;
 
 #[must_use]
 pub(super) enum DeadConsequence {

@@ -21,7 +21,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	// use sp_runtime::traits::TrailingZeroInput;
 	use pallet_omniverse_protocol::{OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, TRANSFER};
-	use pallet_assets::traits::{OmniverseTokenFactoryHandler};
+	use pallet_assets::traits::OmniverseTokenFactoryHandler;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]

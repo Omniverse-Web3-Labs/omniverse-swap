@@ -174,15 +174,10 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 	use codec::{Encode, Decode};
-	use secp256k1::PublicKey;
-	use sp_runtime::traits::BlakeTwo256;
-	use sp_core::Hasher;
 	use frame_support::sp_runtime::traits::{Saturating, One};
 
-	use pallet_omniverse_protocol::{VerifyResult, VerifyError, OmniverseTokenProtocol,
-		TRANSFER, MINT, TransferTokenOp, MintTokenOp, TokenOpcode,
-		traits::OmniverseAccounts};
-	use traits::{OmniverseTokenFactoryHandler};
+	use pallet_omniverse_protocol::{OmniverseTokenProtocol, traits::OmniverseAccounts};
+	use traits::OmniverseTokenFactoryHandler;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -522,6 +517,8 @@ pub mod pallet {
 		/// The operation would result in funds being burned.
 		WouldBurn,
 
+		Unsupport,
+
 		DoTransferFailed,
 		DoMintFailed,
 
@@ -590,7 +587,8 @@ pub mod pallet {
 				},
 			);
 			Self::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
-			Ok(())
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(())
 		}
 
 		/// Issue a new class of fungible assets from a privileged origin.
@@ -622,7 +620,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)?;
 			let owner = T::Lookup::lookup(owner)?;
-			Self::do_force_create(id, owner, is_sufficient, min_balance)
+			Self::do_force_create(id, owner, is_sufficient, min_balance)?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Destroy a class of fungible assets.
@@ -657,13 +656,15 @@ pub mod pallet {
 				Ok(_) => None,
 				Err(origin) => Some(ensure_signed(origin)?),
 			};
-			let details = Self::do_destroy(id, witness, maybe_check_owner)?;
-			Ok(Some(T::WeightInfo::destroy(
-				details.accounts.saturating_sub(details.sufficients),
-				details.sufficients,
-				details.approvals,
-			))
-			.into())
+			Self::do_destroy(id, witness, maybe_check_owner)?;
+
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(Some(T::WeightInfo::destroy(
+			// 	details.accounts.saturating_sub(details.sufficients),
+			// 	details.sufficients,
+			// 	details.approvals,
+			// ))
+			// .into())
 		}
 
 		/// Mint assets of a particular class.
@@ -688,7 +689,8 @@ pub mod pallet {
 			let origin = ensure_signed(origin)?;
 			let beneficiary = T::Lookup::lookup(beneficiary)?;
 			Self::do_mint(id, &beneficiary, amount, Some(origin))?;
-			Ok(())
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(())
 		}
 
 		/// Reduce the balance of `who` by as much as possible up to `amount` assets of `id`.
@@ -718,7 +720,8 @@ pub mod pallet {
 
 			let f = DebitFlags { keep_alive: false, best_effort: true };
 			let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
-			Ok(())
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(())
 		}
 
 		/// Move some assets from the sender account to another.
@@ -750,7 +753,8 @@ pub mod pallet {
 			let dest = T::Lookup::lookup(target)?;
 
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
-			Self::do_transfer(id, &origin, &dest, amount, None, f).map(|_| ())
+			Self::do_transfer(id, &origin, &dest, amount, None, f).map(|_| ())?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Move some assets from the sender account to another, keeping the sender account alive.
@@ -782,7 +786,8 @@ pub mod pallet {
 			let dest = T::Lookup::lookup(target)?;
 
 			let f = TransferFlags { keep_alive: true, best_effort: false, burn_dust: false };
-			Self::do_transfer(id, &source, &dest, amount, None, f).map(|_| ())
+			Self::do_transfer(id, &source, &dest, amount, None, f).map(|_| ())?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Move some assets from one account to another.
@@ -817,7 +822,8 @@ pub mod pallet {
 			let dest = T::Lookup::lookup(dest)?;
 
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
-			Self::do_transfer(id, &source, &dest, amount, Some(origin), f).map(|_| ())
+			Self::do_transfer(id, &source, &dest, amount, Some(origin), f).map(|_| ())?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Disallow further unprivileged transfers from an account.
@@ -848,7 +854,8 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::<T, I>::Frozen { asset_id: id, who });
-			Ok(())
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(())
 		}
 
 		/// Allow unprivileged transfers from an account again.
@@ -879,7 +886,8 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::<T, I>::Thawed { asset_id: id, who });
-			Ok(())
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(())
 		}
 
 		/// Disallow further unprivileged transfers for the asset class.
@@ -905,7 +913,8 @@ pub mod pallet {
 				d.is_frozen = true;
 
 				Self::deposit_event(Event::<T, I>::AssetFrozen { asset_id: id });
-				Ok(())
+				Err(Error::<T, I>::Unsupport.into())
+				// Ok(())
 			})
 		}
 
@@ -932,7 +941,8 @@ pub mod pallet {
 				d.is_frozen = false;
 
 				Self::deposit_event(Event::<T, I>::AssetThawed { asset_id: id });
-				Ok(())
+				Err(Error::<T, I>::Unsupport.into())
+				// Ok(())
 			})
 		}
 
@@ -959,7 +969,7 @@ pub mod pallet {
 				let details = maybe_details.as_mut().ok_or(Error::<T, I>::Unknown)?;
 				ensure!(origin == details.owner, Error::<T, I>::NoPermission);
 				if details.owner == owner {
-					return Ok(())
+					return Err(Error::<T, I>::Unsupport.into())
 				}
 
 				let metadata_deposit = Metadata::<T, I>::get(id).deposit;
@@ -971,7 +981,8 @@ pub mod pallet {
 				details.owner = owner.clone();
 
 				Self::deposit_event(Event::OwnerChanged { asset_id: id, owner });
-				Ok(())
+				Err(Error::<T, I>::Unsupport.into())
+				// Ok(())
 			})
 		}
 
@@ -1009,7 +1020,8 @@ pub mod pallet {
 				details.freezer = freezer.clone();
 
 				Self::deposit_event(Event::TeamChanged { asset_id: id, issuer, admin, freezer });
-				Ok(())
+				Err(Error::<T, I>::Unsupport.into())
+				// Ok(())
 			})
 		}
 
@@ -1198,7 +1210,8 @@ pub mod pallet {
 				*maybe_asset = Some(asset);
 
 				Self::deposit_event(Event::AssetStatusChanged { asset_id: id });
-				Ok(())
+				Err(Error::<T, I>::Unsupport.into())
+				// Ok(())
 			})
 		}
 
@@ -1231,7 +1244,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
 			let delegate = T::Lookup::lookup(delegate)?;
-			Self::do_approve_transfer(id, &owner, &delegate, amount)
+			Self::do_approve_transfer(id, &owner, &delegate, amount)?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Cancel all of some asset approved for delegated transfer by a third-party account.
@@ -1264,7 +1278,8 @@ pub mod pallet {
 			Asset::<T, I>::insert(id, d);
 
 			Self::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
-			Ok(())
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(())
 		}
 
 		/// Cancel all of some asset approved for delegated transfer by a third-party account.
@@ -1306,7 +1321,8 @@ pub mod pallet {
 			Asset::<T, I>::insert(id, d);
 
 			Self::deposit_event(Event::ApprovalCancelled { asset_id: id, owner, delegate });
-			Ok(())
+			Err(Error::<T, I>::Unsupport.into())
+			// Ok(())
 		}
 
 		/// Transfer some asset balance from a previously delegated account to some third-party
@@ -1338,7 +1354,8 @@ pub mod pallet {
 			let delegate = ensure_signed(origin)?;
 			let owner = T::Lookup::lookup(owner)?;
 			let destination = T::Lookup::lookup(destination)?;
-			Self::do_transfer_approved(id, &owner, &delegate, &destination, amount)
+			Self::do_transfer_approved(id, &owner, &delegate, &destination, amount)?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Create an asset account for non-provider assets.
@@ -1352,7 +1369,8 @@ pub mod pallet {
 		/// Emits `Touched` event when successful.
 		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn touch(origin: OriginFor<T>, #[pallet::compact] id: T::AssetId) -> DispatchResult {
-			Self::do_touch(id, ensure_signed(origin)?)
+			Self::do_touch(id, ensure_signed(origin)?)?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		/// Return the deposit (if any) of an asset account.
@@ -1369,7 +1387,8 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			allow_burn: bool,
 		) -> DispatchResult {
-			Self::do_refund(id, ensure_signed(origin)?, allow_burn)
+			Self::do_refund(id, ensure_signed(origin)?, allow_burn)?;
+			Err(Error::<T, I>::Unsupport.into())
 		}
 
 		#[pallet::weight(0)]
@@ -1387,15 +1406,7 @@ pub mod pallet {
 
 			// Integrate assets
 			// Convert public key to account id
-			let mut owner_pk_full: [u8; 65] = [0; 65];
-			owner_pk_full[1..65].copy_from_slice(&owner_pk);
-			owner_pk_full[0] = 4;
-
-			let public_key = PublicKey::from_slice(&owner_pk_full[..]).map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
-
-			let public_key_compressed = public_key.serialize();
-			let hash = BlakeTwo256::hash(&public_key_compressed);
-			let account = T::AccountId::decode(&mut &hash[..]).unwrap();
+			let account = Self::to_account(&owner_pk)?;
 
 			let owner = account.clone();
 			let admin = account.clone();

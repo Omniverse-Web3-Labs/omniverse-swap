@@ -1,11 +1,7 @@
-use codec::{Encode, Decode};
+use codec::Decode;
 use sp_std::vec::Vec;
-use sp_core::{Hasher};
-use sp_runtime::{
-    traits::{
-        Keccak256
-    }
-};
+use sp_core::Hasher;
+use sp_runtime::traits::Keccak256;
 use crate::{OmniverseTokenProtocol, MINT, TRANSFER, MintTokenOp, TransferTokenOp, TokenOpcode};
 
 pub fn get_transaction_hash(data: &OmniverseTokenProtocol) -> [u8; 32] {

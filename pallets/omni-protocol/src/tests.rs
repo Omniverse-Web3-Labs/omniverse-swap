@@ -1,9 +1,8 @@
-use crate::{mock::*, Error};
-use omniverse_protocol_traits::{OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError,
-    TransferTokenOp, TokenOpcode, TRANSFER, get_transaction_hash};
-use frame_support::{assert_noop, assert_ok, assert_err};
-use sha3::{Digest, Keccak256};
-use codec::{Encode, Decode};
+use crate::mock::*;
+use crate::{traits::OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError,
+    TransferTokenOp, TokenOpcode, TRANSFER};
+use frame_support::assert_err;
+use codec::Encode;
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{Secp256k1, Message, ecdsa::RecoverableSignature, SecretKey, PublicKey};
 
