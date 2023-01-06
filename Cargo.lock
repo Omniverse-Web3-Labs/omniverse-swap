@@ -1216,6 +1216,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derivative"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3688,10 +3699,10 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "pallet-assets",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
- "pallet-omniverse-factory",
  "pallet-omniverse-protocol",
  "pallet-omniverse-swap",
  "pallet-randomness-collective-flip",
@@ -3714,6 +3725,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder",
+ "xcm",
 ]
 
 [[package]]
@@ -3829,31 +3841,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "omniverse-protocol-traits"
-version = "4.0.0-dev"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "serde_json",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "omniverse-token-traits"
-version = "4.0.0-dev"
-dependencies = [
- "omniverse-protocol-traits",
- "parity-scale-codec",
- "scale-info",
- "serde_json",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3882,6 +3869,25 @@ name = "os_str_bytes"
 version = "6.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ff7415e9ae3fff1225851df9e0d9e4e5479f947619774677a63572e55e80eff"
+
+[[package]]
+name = "pallet-assets"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-omniverse-protocol",
+ "parity-scale-codec",
+ "scale-info",
+ "secp256k1 0.24.1",
+ "sha3",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
 
 [[package]]
 name = "pallet-aura"
@@ -3953,32 +3959,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-omniverse-factory"
-version = "4.0.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "omniverse-protocol-traits",
- "omniverse-token-traits",
- "parity-scale-codec",
- "scale-info",
- "secp256k1 0.25.0",
- "sha3",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-omniverse-protocol"
 version = "4.0.0-dev"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "omniverse-protocol-traits",
  "parity-scale-codec",
  "scale-info",
  "secp256k1 0.25.0",
@@ -3996,9 +3982,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "omniverse-protocol-traits",
- "omniverse-token-traits",
- "pallet-omniverse-factory",
+ "pallet-assets",
+ "pallet-omniverse-protocol",
  "parity-scale-codec",
  "scale-info",
  "secp256k1 0.25.0",
@@ -6164,6 +6149,7 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff55dc09d460954e9ef2fa8a7ced735a964be9981fd50e870b2b3b0705e14964"
 dependencies = [
+ "rand 0.8.5",
  "secp256k1-sys 0.6.1",
 ]
 
@@ -8578,6 +8564,31 @@ dependencies = [
  "curve25519-dalek 3.2.0",
  "rand_core 0.5.1",
  "zeroize",
+]
+
+[[package]]
+name = "xcm"
+version = "0.9.31"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.31#32dd0c9cfcd1a1bda821747f6ab334f0e3577558"
+dependencies = [
+ "derivative",
+ "impl-trait-for-tuples",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "xcm-procedural",
+]
+
+[[package]]
+name = "xcm-procedural"
+version = "0.9.31"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.31#32dd0c9cfcd1a1bda821747f6ab334f0e3577558"
+dependencies = [
+ "Inflector",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

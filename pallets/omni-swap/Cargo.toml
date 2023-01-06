@@ -25,9 +25,8 @@ sp-std = { version = "4.0.0", default-features = false, git = "https://github.co
 sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.31" }
 sp-io = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.31" }
 
-omniverse-protocol-traits = { version = "4.0.0-dev", default-features = false, path = "../omni-protocol/traits" }
-omniverse-token-traits = { version = "4.0.0-dev", default-features = false, path = "../omni-factory/traits" }
-pallet-omniverse-factory = { version = "4.0.0-dev", default-features = false, path = "../omni-factory" }
+pallet-omniverse-protocol = { version = "4.0.0-dev", default-features = false, path = "../omni-protocol" }
+pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../assets" }
 
 [dev-dependencies]
 secp256k1 = { version = "0.25.0", features = ["rand", "global-context", "recovery"] }

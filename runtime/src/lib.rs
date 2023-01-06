@@ -51,9 +51,6 @@ pub use pallet_template;
 /// Import the omniverse protocol pallet.
 pub use pallet_omniverse_protocol;
 
-/// Import the omniverse factory pallet.
-pub use pallet_omniverse_factory;
-
 pub use pallet_omniverse_swap;
 
 /// An index to a block.
@@ -74,6 +71,12 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
+
+pub const UNITS: Balance = 1_000_000_000_000;
+
+pub type AssetId = u32;
+
+pub type AssetsForceOrigin = frame_system::EnsureRoot<AccountId>;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -264,6 +267,39 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
+	pub const AssetDeposit: Balance = 10 * UNITS; // 10 UNITS deposit to create fungible asset class
+	pub const AssetAccountDeposit: Balance = UNITS;
+	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
+	pub const AssetsStringLimit: u32 = 50;
+	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
+	// https://github.com/paritytech/substrate/blob/069917b/frame/assets/src/lib.rs#L257L271
+	pub const MetadataDepositBase: Balance = UNITS;
+	pub const MetadataDepositPerByte: Balance = UNITS;
+}
+
+/// We allow root and the Relay Chain council to execute privileged asset operations.
+// pub type AssetsForceOrigin =
+// 	EitherOfDiverse<EnsureRoot<AccountId>, EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>>;
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type OmniverseProtocol = OmniverseProtocol;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Currency = Balances;
+	type ForceOrigin = AssetsForceOrigin;
+	type AssetDeposit = AssetDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = AssetsStringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type AssetAccountDeposit = AssetAccountDeposit;
+}
+
+parameter_types! {
 	pub FeeMultiplier: Multiplier = Multiplier::one();
 }
 
@@ -291,16 +327,10 @@ impl pallet_omniverse_protocol::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
-/// Configure the pallet-omniverse-factory in pallets/omni-factory.
-impl pallet_omniverse_factory::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
-	type OmniverseProtocol = OmniverseProtocol;
-}
-
 /// Configure the pallet-omniverse-swap in pallets/omni-swap.
 impl pallet_omniverse_swap::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type OmniverseToken = OmniverseFactory;
+	type OmniverseToken = Assets;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -322,8 +352,8 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		TemplateModule: pallet_template,
 		OmniverseProtocol: pallet_omniverse_protocol,
-		OmniverseFactory: pallet_omniverse_factory,
 		OmniverseSwap: pallet_omniverse_swap,
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
 	}
 );
 
@@ -372,7 +402,6 @@ mod benches {
 		[pallet_timestamp, Timestamp]
 		[pallet_template, TemplateModule]
 		[pallet_omniverse_protocol, OmniverseProtocol]
-		[pallet_omniverse_factory, OmniverseFactory]
 		[pallet_omniverse_swap, OmniverseSwap]
 	);
 }
