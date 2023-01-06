@@ -24,12 +24,14 @@ use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{ConstU32, ConstU64, GenesisBuild},
 };
+use pallet_omniverse_protocol::{
+	traits::OmniverseAccounts, OmniverseTokenProtocol, VerifyError, VerifyResult,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use pallet_omniverse_protocol::{traits::OmniverseAccounts, OmniverseTokenProtocol, VerifyResult, VerifyError};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -97,15 +99,15 @@ impl OmniverseAccounts for OmniverseProtocol {
 		Ok(VerifyResult::Success)
 	}
 
-    fn get_transaction_count(_pk: [u8; 64]) -> u128 {
+	fn get_transaction_count(_pk: [u8; 64]) -> u128 {
 		0
 	}
 
-    fn is_malicious(_pk: [u8; 64]) -> bool {
+	fn is_malicious(_pk: [u8; 64]) -> bool {
 		false
 	}
 
-    fn get_chain_id() -> u8 {
+	fn get_chain_id() -> u8 {
 		1
 	}
 }
@@ -127,7 +129,6 @@ impl Config for Test {
 	type Extra = ();
 	type OmniverseProtocol = OmniverseProtocol;
 }
-
 
 use std::collections::HashMap;
 
@@ -177,14 +178,9 @@ pub(crate) fn take_hooks() -> Vec<Hook> {
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut storage = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-	pallet_balances::GenesisConfig::<Test> {
-		balances: vec! [
-			(1, 1024),
-			(2, 10000),
-		],
-	}
-	.assimilate_storage(&mut storage)
-	.unwrap();
+	pallet_balances::GenesisConfig::<Test> { balances: vec![(1, 1024), (2, 10000)] }
+		.assimilate_storage(&mut storage)
+		.unwrap();
 
 	let config: pallet_assets::GenesisConfig<Test> = pallet_assets::GenesisConfig {
 		assets: vec![

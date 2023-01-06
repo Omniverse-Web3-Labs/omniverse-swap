@@ -230,9 +230,9 @@ pub enum ConversionError {
 
 #[derive(Debug, PartialEq)]
 pub enum FactoryResult {
-    Success,
-    ProtocolMalicious,
-    ProtocolDuplicated,
+	Success,
+	ProtocolMalicious,
+	ProtocolDuplicated,
 }
 
 // Type alias for `frame_system`'s account id.

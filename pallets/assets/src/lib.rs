@@ -144,7 +144,7 @@ use codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero
+		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero,
 	},
 	ArithmeticError, TokenError,
 };
@@ -169,13 +169,13 @@ type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use codec::{Decode, Encode};
 	use frame_support::pallet_prelude::*;
+	use frame_support::sp_runtime::traits::{One, Saturating};
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
-	use codec::{Encode, Decode};
-	use frame_support::sp_runtime::traits::{Saturating, One};
 
-	use pallet_omniverse_protocol::{OmniverseTokenProtocol, traits::OmniverseAccounts};
+	use pallet_omniverse_protocol::{traits::OmniverseAccounts, OmniverseTokenProtocol};
 	use traits::OmniverseTokenFactoryHandler;
 
 	#[pallet::pallet]
@@ -309,23 +309,36 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn tokens_info)]
-	pub type TokensInfo<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, Vec<u8>, OmniverseToken<T::AccountId>>;
+	pub type TokensInfo<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, OmniverseToken<T::AccountId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn tokens)]
-	pub type Tokens<T:Config<I>, I: 'static = ()> = StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
+	pub type Tokens<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		Vec<u8>,
+		Blake2_128Concat,
+		[u8; 64],
+		u128,
+		ValueQuery,
+		GetDefaultValue,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn current_asset_id)]
-	pub type CurrentAssetId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, Vec<u8>, T::AssetId>;
+	pub type CurrentAssetId<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, T::AssetId>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn asset_id_2_token_id)]
-	pub type AssetId2TokenId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, T::AssetId, Vec<u8>>;
+	pub type AssetId2TokenId<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, T::AssetId, Vec<u8>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_id_2_asset_id)]
-	pub type TokenId2AssetId<T:Config<I>, I: 'static = ()> = StorageMap<_, Blake2_128Concat, Vec<u8>, T::AssetId>;
+	pub type TokenId2AssetId<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, T::AssetId>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
@@ -414,9 +427,17 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
 		/// Some asset class was created.
-		Created { asset_id: T::AssetId, creator: T::AccountId, owner: T::AccountId },
+		Created {
+			asset_id: T::AssetId,
+			creator: T::AccountId,
+			owner: T::AccountId,
+		},
 		/// Some assets were issued.
-		Issued { asset_id: T::AssetId, owner: T::AccountId, total_supply: T::Balance },
+		Issued {
+			asset_id: T::AssetId,
+			owner: T::AccountId,
+			total_supply: T::Balance,
+		},
 		/// Some assets were transferred.
 		Transferred {
 			asset_id: T::AssetId,
@@ -425,7 +446,11 @@ pub mod pallet {
 			amount: T::Balance,
 		},
 		/// Some assets were destroyed.
-		Burned { asset_id: T::AssetId, owner: T::AccountId, balance: T::Balance },
+		Burned {
+			asset_id: T::AssetId,
+			owner: T::AccountId,
+			balance: T::Balance,
+		},
 		/// The management team changed.
 		TeamChanged {
 			asset_id: T::AssetId,
@@ -434,19 +459,37 @@ pub mod pallet {
 			freezer: T::AccountId,
 		},
 		/// The owner changed.
-		OwnerChanged { asset_id: T::AssetId, owner: T::AccountId },
+		OwnerChanged {
+			asset_id: T::AssetId,
+			owner: T::AccountId,
+		},
 		/// Some account `who` was frozen.
-		Frozen { asset_id: T::AssetId, who: T::AccountId },
+		Frozen {
+			asset_id: T::AssetId,
+			who: T::AccountId,
+		},
 		/// Some account `who` was thawed.
-		Thawed { asset_id: T::AssetId, who: T::AccountId },
+		Thawed {
+			asset_id: T::AssetId,
+			who: T::AccountId,
+		},
 		/// Some asset `asset_id` was frozen.
-		AssetFrozen { asset_id: T::AssetId },
+		AssetFrozen {
+			asset_id: T::AssetId,
+		},
 		/// Some asset `asset_id` was thawed.
-		AssetThawed { asset_id: T::AssetId },
+		AssetThawed {
+			asset_id: T::AssetId,
+		},
 		/// An asset class was destroyed.
-		Destroyed { asset_id: T::AssetId },
+		Destroyed {
+			asset_id: T::AssetId,
+		},
 		/// Some asset class was force-created.
-		ForceCreated { asset_id: T::AssetId, owner: T::AccountId },
+		ForceCreated {
+			asset_id: T::AssetId,
+			owner: T::AccountId,
+		},
 		/// New metadata has been set for an asset.
 		MetadataSet {
 			asset_id: T::AssetId,
@@ -456,7 +499,9 @@ pub mod pallet {
 			is_frozen: bool,
 		},
 		/// Metadata has been cleared for an asset.
-		MetadataCleared { asset_id: T::AssetId },
+		MetadataCleared {
+			asset_id: T::AssetId,
+		},
 		/// (Additional) funds have been approved for transfer to a destination account.
 		ApprovedTransfer {
 			asset_id: T::AssetId,
@@ -465,7 +510,11 @@ pub mod pallet {
 			amount: T::Balance,
 		},
 		/// An approval for account `delegate` was cancelled by `owner`.
-		ApprovalCancelled { asset_id: T::AssetId, owner: T::AccountId, delegate: T::AccountId },
+		ApprovalCancelled {
+			asset_id: T::AssetId,
+			owner: T::AccountId,
+			delegate: T::AccountId,
+		},
 		/// An `amount` was transferred in its entirety from `owner` to `destination` by
 		/// the approved `delegate`.
 		TransferredApproved {
@@ -476,8 +525,13 @@ pub mod pallet {
 			amount: T::Balance,
 		},
 		/// An asset has had its attributes changed by the `Force` origin.
-		AssetStatusChanged { asset_id: T::AssetId },
-		MembersSet { token_id: Vec<u8>, members: Vec::<u8>},
+		AssetStatusChanged {
+			asset_id: T::AssetId,
+		},
+		MembersSet {
+			token_id: Vec<u8>,
+			members: Vec<u8>,
+		},
 	}
 
 	#[pallet::error]
@@ -1394,7 +1448,12 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub fn create_token(origin: OriginFor<T>, owner_pk: [u8; 64], token_id: Vec<u8>, members: Option<Vec<u8>>) -> DispatchResult {
+		pub fn create_token(
+			origin: OriginFor<T>,
+			owner_pk: [u8; 64],
+			token_id: Vec<u8>,
+			members: Option<Vec<u8>>,
+		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			// Check if the token exists
@@ -1402,9 +1461,9 @@ pub mod pallet {
 
 			// Update storage.
 			TokensInfo::<T, I>::insert(
-                &token_id,
-                OmniverseToken::new(sender.clone(), owner_pk, token_id.clone(), members)
-            );
+				&token_id,
+				OmniverseToken::new(sender.clone(), owner_pk, token_id.clone(), members),
+			);
 
 			// Integrate assets
 			// Convert public key to account id
@@ -1446,7 +1505,11 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub fn send_transaction(origin: OriginFor<T>, token_id: Vec<u8>, data: OmniverseTokenProtocol) -> DispatchResult {
+		pub fn send_transaction(
+			origin: OriginFor<T>,
+			token_id: Vec<u8>,
+			data: OmniverseTokenProtocol,
+		) -> DispatchResult {
 			ensure_signed(origin)?;
 
 			Self::send_transaction_external(token_id, &data)?;
@@ -1455,27 +1518,34 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub fn set_members(origin: OriginFor<T>, token_id: Vec<u8>, members: Vec<u8>) -> DispatchResult {
+		pub fn set_members(
+			origin: OriginFor<T>,
+			token_id: Vec<u8>,
+			members: Vec<u8>,
+		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-            // Check if the token exists.
-            let mut token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
+			// Check if the token exists.
+			let mut token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
 
-            ensure!(token.owner == sender, Error::<T, I>::NoPermission);
+			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
 
 			token.add_members(members.clone());
 
-            // Update storage
+			// Update storage
 			TokensInfo::<T, I>::insert(&token_id, token);
 
-            Self::deposit_event(Event::MembersSet {token_id, members});
+			Self::deposit_event(Event::MembersSet { token_id, members });
 
 			Ok(())
 		}
 	}
 
 	impl<T: Config<I>, I: 'static> OmniverseTokenFactoryHandler for Pallet<T, I> {
-		fn send_transaction_external(token_id: Vec<u8>, data: &OmniverseTokenProtocol) -> Result<FactoryResult, DispatchError> {
+		fn send_transaction_external(
+			token_id: Vec<u8>,
+			data: &OmniverseTokenProtocol,
+		) -> Result<FactoryResult, DispatchError> {
 			// Check if the token exists.
 			let token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
 
@@ -1490,19 +1560,19 @@ pub mod pallet {
 		pub owner: AccountId,
 		pub owner_pk: [u8; 64],
 		pub token_id: Vec<u8>,
-		pub members: Vec<u8>
+		pub members: Vec<u8>,
 	}
 
-	impl<AccountId> OmniverseToken<AccountId> {		
-		fn new(owner: AccountId, owner_pk: [u8; 64], token_id: Vec<u8>, members: Option<Vec<u8>>) -> Self {
-			Self {
-				owner,
-				owner_pk,
-				token_id,
-				members: members.unwrap_or(Vec::<u8>::new())
-			}
+	impl<AccountId> OmniverseToken<AccountId> {
+		fn new(
+			owner: AccountId,
+			owner_pk: [u8; 64],
+			token_id: Vec<u8>,
+			members: Option<Vec<u8>>,
+		) -> Self {
+			Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<u8>::new()) }
 		}
-	
+
 		fn add_members(&mut self, members: Vec<u8>) {
 			for m in &members {
 				if !self.members.contains(m) {
