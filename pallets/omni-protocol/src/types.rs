@@ -82,25 +82,25 @@ impl OmniverseTokenProtocol {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
-pub struct OmniverseTx<Moment> {
+pub struct OmniverseTx {
 	pub tx_data: OmniverseTokenProtocol,
-	pub timestamp: Moment,
+	pub timestamp: u64,
 }
 
-impl<Moment> OmniverseTx<Moment> {
-	pub fn new(data: OmniverseTokenProtocol, timestamp: Moment) -> Self {
+impl OmniverseTx {
+	pub fn new(data: OmniverseTokenProtocol, timestamp: u64) -> Self {
 		Self { tx_data: data, timestamp}
 	}
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
-pub struct EvilTxData<Moment> {
-	pub tx_omni: OmniverseTx<Moment>,
+pub struct EvilTxData {
+	pub tx_omni: OmniverseTx,
 	pub his_nonce: u128,
 }
 
-impl<Moment> EvilTxData<Moment> {
-	pub fn new(data: OmniverseTx<Moment>, nonce: u128) -> Self {
+impl EvilTxData {
+	pub fn new(data: OmniverseTx, nonce: u128) -> Self {
 		Self { tx_omni: data, his_nonce: nonce }
 	}
 }

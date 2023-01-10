@@ -19,18 +19,19 @@ pub mod traits;
 pub mod pallet {
 	use super::types::{OmniverseTokenProtocol, VerifyError, VerifyResult, EvilTxData, OmniverseTx};
 	use codec::{Decode, Encode};
-	use frame_support::{pallet_prelude::*, weights::constants};
+	use frame_support::{pallet_prelude::*, traits::UnixTime, weights::constants};
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
-	pub use pallet_timestamp::{self as timestamp};
+	use core::time::Duration;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + timestamp::Config {
+	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
 		type ChainId: Get<u8>;
+		type Timestamp: UnixTime;
 	}
 
 	#[pallet::type_value]
@@ -50,7 +51,7 @@ pub mod pallet {
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub type TransactionRecorder<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, [u8; 64], Blake2_128Concat, u128, OmniverseTx<T::Moment>>;
+		StorageDoubleMap<_, Blake2_128Concat, [u8; 64], Blake2_128Concat, u128, OmniverseTx>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn transaction_count)]
@@ -63,7 +64,7 @@ pub mod pallet {
 	#[pallet::getter(fn evil_recorder)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type EvilRecorder<T: Config> = StorageMap<_, Blake2_128Concat, [u8; 64], Vec<EvilTxData<T::Moment>>>;
+	pub type EvilRecorder<T: Config> = StorageMap<_, Blake2_128Concat, [u8; 64], Vec<EvilTxData>>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors

@@ -3,8 +3,8 @@ use super::traits::*;
 use crate::{MintTokenOp, OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, MINT, TRANSFER};
 use codec::Decode;
 use sp_core::Hasher;
-use frame_support::traits::Get;
-use sp_runtime::traits::Keccak256;
+use frame_support::traits::{Get, UnixTime};
+use sp_runtime::{traits::Keccak256};
 use sp_std::vec::Vec;
 use sp_io::crypto;
 
@@ -51,7 +51,7 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		// Check nonce
 		if nonce == data.nonce {
 			// Add to transaction recorder
-			let omni_tx = OmniverseTx::<T::Moment>::new(data.clone(), <timestamp::Pallet<T>>::get());
+			let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
 			TransactionRecorder::<T>::insert(&data.from, &nonce, omni_tx);
 			TransactionCount::<T>::insert(&data.from, nonce + 1);
 			if data.chain_id == T::ChainId::get() {
@@ -63,10 +63,10 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 			let his_tx = TransactionRecorder::<T>::get(&data.from, &data.nonce).unwrap();
 			let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data);
 			if his_tx_hash != tx_hash_bytes {
-				let omni_tx = OmniverseTx::<T::Moment>::new(data.clone(), <timestamp::Pallet<T>>::get());
-				let evil_tx = EvilTxData::<T::Moment>::new(omni_tx, nonce);
+				let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
+				let evil_tx = EvilTxData::new(omni_tx, nonce);
 				let mut er =
-					EvilRecorder::<T>::get(&data.from).unwrap_or(Vec::<EvilTxData<T::Moment>>::default());
+					EvilRecorder::<T>::get(&data.from).unwrap_or(Vec::<EvilTxData>::default());
 				er.push(evil_tx);
 				EvilRecorder::<T>::insert(&data.from, er);
 				Ok(VerifyResult::Malicious)
@@ -95,5 +95,13 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 
 	fn get_chain_id() -> u8 {
 		T::ChainId::get()
+	}
+	
+	fn get_transaction_data(pk: [u8; 64], nonce: u128) -> Option<OmniverseTx> {
+		TransactionRecorder::<T>::get(pk, nonce)
+	}
+
+	fn get_cooling_down_time() -> u64 {
+		10
 	}
 }

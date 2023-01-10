@@ -306,3 +306,27 @@ impl<AccountId> OmniverseToken<AccountId> {
 		}
 	}
 }
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct DelayedTx {
+	pub sender: [u8; 64],
+	pub nonce: u128,
+}
+
+impl DelayedTx {
+	pub fn new(sender: [u8; 64], nonce: u128) -> Self {
+		Self {
+			sender,
+			nonce
+		}
+	}
+}
+
+impl Default for DelayedTx {
+	fn default() -> Self {
+		Self {
+			sender: [0; 64],
+			nonce: 0
+		}
+	}
+}

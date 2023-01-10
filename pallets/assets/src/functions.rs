@@ -896,8 +896,19 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				return Err(Error::<T, I>::ProtocolSignerNotCaller.into())
 			},
 			Err(VerifyError::NonceError) => return Err(Error::<T, I>::ProtocolNonceError.into()),
+			Ok(VerifyResult::Success) => {
+				let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
+				DelayedTransactions::<T, I>::insert(delayed_index, DelayedTx::new(data.from, data.nonce));
+				DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
+			}
 			_ => (),
 		}
+
+		Ok(FactoryResult::Success)
+	}
+
+	pub(super) fn execute_transaction(data: &OmniverseTokenProtocol) -> Result<(), DispatchError> {
+		let omniverse_token = TokensInfo::<T, I>::get(&data.to).ok_or(Error::<T, I>::Unknown)?;
 
 		// Execute
 		let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
@@ -928,7 +939,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			Self::do_mint(id, &dest, amount, Some(origin))?;
 		}
 
-		Ok(FactoryResult::Success)
+		Ok(())
 	}
 
 	pub(super) fn omniverse_transfer(

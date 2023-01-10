@@ -144,7 +144,7 @@ use codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero,
+		AtLeast32Bit, Scale, AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero,
 	},
 	ArithmeticError, TokenError,
 };
@@ -170,7 +170,7 @@ type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup
 pub mod pallet {
 	use super::*;
 	use codec::{Decode, Encode};
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, BoundedVec, traits::UnixTime};
 	use frame_support::sp_runtime::traits::{One, Saturating};
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
@@ -191,6 +191,8 @@ pub mod pallet {
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type OmniverseProtocol: OmniverseAccounts;
+
+		type Timestamp: UnixTime;
 
 		/// The units in which we record balances.
 		type Balance: Member
@@ -263,6 +265,11 @@ pub mod pallet {
 		0
 	}
 
+	#[pallet::type_value]
+	pub fn GetDefaultDelayedIndex() -> (u32, u32) {
+		(0_u32, 0_u32)
+	}
+
 	#[pallet::storage]
 	/// Details of an asset.
 	pub(super) type Asset<T: Config<I>, I: 'static = ()> = StorageMap<
@@ -324,6 +331,19 @@ pub mod pallet {
 		ValueQuery,
 		GetDefaultValue,
 	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn delayed_transctions)]
+	pub type DelayedTransactions<T: Config<I>, I: 'static = ()> = StorageMap<
+		_,
+		Blake2_128Concat,
+		u32,
+		DelayedTx,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn delayed_index)]
+	pub type DelayedIndex<T: Config<I>, I: 'static = ()> = StorageValue<_, (u32, u32), ValueQuery, GetDefaultDelayedIndex>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn current_asset_id)]
@@ -582,6 +602,10 @@ pub mod pallet {
 		ProtocolSignerNotCaller,
 		ProtocolSignatureError,
 		ProtocolNonceError,
+		NoDelayedTx,
+		TxNotExisted,
+		NotExecutable,
+		DelayedTxNotExisted,
 	}
 
 	#[pallet::call]
@@ -1513,6 +1537,26 @@ pub mod pallet {
 			ensure_signed(origin)?;
 
 			Self::send_transaction_external(token_id, &data)?;
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn trigger_execution(origin: OriginFor<T>) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
+			ensure!(delayed_executing_index < delayed_index, Error::<T, I>::NoDelayedTx);
+
+			let delayed_tx = DelayedTransactions::<T, I>::get(delayed_executing_index).ok_or(Error::<T, I>::DelayedTxNotExisted)?;
+			let omni_tx = T::OmniverseProtocol::get_transaction_data(delayed_tx.sender, delayed_tx.nonce).ok_or(Error::<T, I>::TxNotExisted)?;
+
+			let cur_st = T::Timestamp::now().as_secs();
+			ensure!(cur_st > omni_tx.timestamp + T::OmniverseProtocol::get_cooling_down_time(), Error::<T, I>::NotExecutable);
+
+			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
+
+			Self::execute_transaction(&omni_tx.tx_data)?;
 
 			Ok(())
 		}
