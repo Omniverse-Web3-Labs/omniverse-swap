@@ -21,8 +21,9 @@ use super::traits::OmniverseTokenFactoryHandler;
 use super::*;
 use crate::{mock::*, Error};
 use codec::{Decode, Encode};
-use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
+use frame_support::{assert_err, assert_noop, assert_ok, traits::{Currency, UnixTime}};
 use pallet_balances::Error as BalancesError;
+use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts, MintTokenOp, OmniverseTokenProtocol, TokenOpcode, TransferTokenOp,
 	MINT, TRANSFER,
@@ -389,6 +390,7 @@ fn force_metadata_should_work() {
 // tests of omniverse tokens
 const CHAIN_ID: u8 = 1;
 const TOKEN_ID: Vec<u8> = Vec::<u8>::new();
+const COOL_DOWN: u64 = 10;
 
 fn get_account_id_from_pk(pk: &[u8]) -> <Test as frame_system::Config>::AccountId {
 	let hash = BlakeTwo256::hash(pk);
@@ -620,8 +622,18 @@ fn it_fails_for_factory_handler_mint_with_signer_not_owner() {
 
 		let (secret_key_to, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let data = encode_mint(&secp, (secret_key_to, public_key_to), public_key_to, 1, nonce);
+		assert_ok!(
+			Assets::send_transaction_external(TOKEN_ID, &data)
+		);
+
+		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
+			data, Timestamp::now().as_secs()
+		)));
+
+		// Delay
+		Timestamp::past(COOL_DOWN);
 		assert_err!(
-			Assets::send_transaction_external(TOKEN_ID, &data),
+			Assets::trigger_execution(RuntimeOrigin::signed(1)),
 			Error::<Test>::SignerNotOwner
 		);
 	});
@@ -649,6 +661,16 @@ fn it_works_for_factory_handler_mint() {
 		let data = encode_mint(&secp, (secret_key, public_key), public_key_to, 1, nonce);
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
+		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
+			data, Timestamp::now().as_secs()
+		)));
+
+		// Delay
+		Timestamp::past(COOL_DOWN);
+		assert_ok!(
+			Assets::trigger_execution(RuntimeOrigin::signed(1))
+		);
+
 		let pk_to: [u8; 64] = public_key_to.serialize_uncompressed()[1..].try_into().expect("");
 		let token = Assets::tokens(TOKEN_ID, pk_to);
 		assert_eq!(token, 1);
@@ -673,7 +695,18 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
-		assert_err!(Assets::send_transaction_external(TOKEN_ID, &data), Error::<Test>::BalanceLow);
+		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
+
+		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
+			data, Timestamp::now().as_secs()
+		)));
+
+		// Delay
+		Timestamp::past(COOL_DOWN);
+		assert_err!(
+			Assets::trigger_execution(RuntimeOrigin::signed(1)),
+			Error::<Test>::BalanceLow
+		);
 	});
 }
 
@@ -697,11 +730,31 @@ fn it_works_for_factory_handler_transfer() {
 		let mint_data = encode_mint(&secp, (secret_key, public_key), public_key, 10, nonce);
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &mint_data));
 
+		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
+			mint_data, Timestamp::now().as_secs()
+		)));
+
+		// Delay
+		Timestamp::past(COOL_DOWN);
+		assert_ok!(
+			Assets::trigger_execution(RuntimeOrigin::signed(1))
+		);
+
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let account_to = get_account_id_from_pk(public_key_to.serialize().as_slice());
 		fund_account(account_to);
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
-		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
+		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));	
+
+		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
+			data, Timestamp::now().as_secs()
+		)));
+
+		// Delay
+		Timestamp::past(COOL_DOWN);
+		assert_ok!(
+			Assets::trigger_execution(RuntimeOrigin::signed(1))
+		);
 
 		assert_eq!(Assets::tokens(TOKEN_ID, &pk), 9);
 		let pk_to: [u8; 64] = public_key_to.serialize_uncompressed()[1..].try_into().expect("");

@@ -1,11 +1,13 @@
 use crate as pallet_omniverse_protocol;
 use frame_support::parameter_types;
 use frame_system as system;
+use frame_support::traits::UnixTime;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use std::time::{SystemTime};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -54,11 +56,26 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+parameter_types! {
+	pub ChainId: u8 = 1;
+}
+
 impl pallet_omniverse_protocol::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
+	type ChainId = ChainId;
+	type Timestamp = Timestamp;
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+}
+
+pub struct Timestamp();
+
+impl UnixTime for Timestamp {
+	fn now() -> core::time::Duration {
+		let now = SystemTime::now();
+		now.duration_since(SystemTime::UNIX_EPOCH).unwrap()
+	}
 }

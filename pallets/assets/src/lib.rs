@@ -144,7 +144,7 @@ use codec::HasCompact;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AtLeast32Bit, Scale, AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero,
+		AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, Saturating, StaticLookup, Zero,
 	},
 	ArithmeticError, TokenError,
 };
@@ -169,7 +169,6 @@ type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use codec::{Decode, Encode};
 	use frame_support::{pallet_prelude::*, BoundedVec, traits::UnixTime};
 	use frame_support::sp_runtime::traits::{One, Saturating};
 	use frame_system::pallet_prelude::*;
@@ -1543,7 +1542,7 @@ pub mod pallet {
 
 		#[pallet::weight(0)]
 		pub fn trigger_execution(origin: OriginFor<T>) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 
 			let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
 			ensure!(delayed_executing_index < delayed_index, Error::<T, I>::NoDelayedTx);

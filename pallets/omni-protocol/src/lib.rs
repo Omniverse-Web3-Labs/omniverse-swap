@@ -17,12 +17,10 @@ pub mod traits;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::types::{OmniverseTokenProtocol, VerifyError, VerifyResult, EvilTxData, OmniverseTx};
-	use codec::{Decode, Encode};
-	use frame_support::{pallet_prelude::*, traits::UnixTime, weights::constants};
+	use super::types::{EvilTxData, OmniverseTx};
+	use frame_support::{pallet_prelude::*, traits::UnixTime};
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
-	use core::time::Duration;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]

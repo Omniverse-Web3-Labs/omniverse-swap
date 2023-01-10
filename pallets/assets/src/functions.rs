@@ -901,7 +901,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				DelayedTransactions::<T, I>::insert(delayed_index, DelayedTx::new(data.from, data.nonce));
 				DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
 			}
-			_ => (),
 		}
 
 		Ok(FactoryResult::Success)
