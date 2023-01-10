@@ -1,3 +1,4 @@
+use super::*;
 use crate::functions;
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
@@ -77,5 +78,29 @@ impl OmniverseTokenProtocol {
 
 	pub fn set_signature(&mut self, signature: [u8; 65]) {
 		self.signature = signature;
+	}
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct OmniverseTx<Moment> {
+	pub tx_data: OmniverseTokenProtocol,
+	pub timestamp: Moment,
+}
+
+impl<Moment> OmniverseTx<Moment> {
+	pub fn new(data: OmniverseTokenProtocol, timestamp: Moment) -> Self {
+		Self { tx_data: data, timestamp}
+	}
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct EvilTxData<Moment> {
+	pub tx_omni: OmniverseTx<Moment>,
+	pub his_nonce: u128,
+}
+
+impl<Moment> EvilTxData<Moment> {
+	pub fn new(data: OmniverseTx<Moment>, nonce: u128) -> Self {
+		Self { tx_omni: data, his_nonce: nonce }
 	}
 }

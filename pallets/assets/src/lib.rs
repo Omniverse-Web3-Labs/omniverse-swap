@@ -1540,45 +1540,4 @@ pub mod pallet {
 			Ok(())
 		}
 	}
-
-	impl<T: Config<I>, I: 'static> OmniverseTokenFactoryHandler for Pallet<T, I> {
-		fn send_transaction_external(
-			token_id: Vec<u8>,
-			data: &OmniverseTokenProtocol,
-		) -> Result<FactoryResult, DispatchError> {
-			// Check if the token exists.
-			let token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
-
-			Self::handle_transaction(token, data)?;
-
-			Ok(FactoryResult::Success)
-		}
-	}
-
-	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
-	pub struct OmniverseToken<AccountId> {
-		pub owner: AccountId,
-		pub owner_pk: [u8; 64],
-		pub token_id: Vec<u8>,
-		pub members: Vec<u8>,
-	}
-
-	impl<AccountId> OmniverseToken<AccountId> {
-		fn new(
-			owner: AccountId,
-			owner_pk: [u8; 64],
-			token_id: Vec<u8>,
-			members: Option<Vec<u8>>,
-		) -> Self {
-			Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<u8>::new()) }
-		}
-
-		fn add_members(&mut self, members: Vec<u8>) {
-			for m in &members {
-				if !self.members.contains(m) {
-					self.members.push(*m)
-				}
-			}
-		}
-	}
 }

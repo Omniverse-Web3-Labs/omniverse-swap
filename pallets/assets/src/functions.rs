@@ -18,6 +18,7 @@
 //! Functions for the Assets pallet.
 
 use super::*;
+use super::traits::OmniverseTokenFactoryHandler;
 use codec::Decode;
 use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
@@ -965,5 +966,19 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let public_key_compressed = public_key.serialize();
 		let hash = BlakeTwo256::hash(&public_key_compressed);
 		Ok(T::AccountId::decode(&mut &hash[..]).unwrap())
+	}
+}
+
+impl<T: Config<I>, I: 'static> OmniverseTokenFactoryHandler for Pallet<T, I> {
+	fn send_transaction_external(
+		token_id: Vec<u8>,
+		data: &OmniverseTokenProtocol,
+	) -> Result<FactoryResult, DispatchError> {
+		// Check if the token exists.
+		let token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
+
+		Self::handle_transaction(token, data)?;
+
+		Ok(FactoryResult::Success)
 	}
 }

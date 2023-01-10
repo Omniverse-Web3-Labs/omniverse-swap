@@ -322,9 +322,14 @@ impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+parameter_types! {
+	pub ChainId: u8 = 1;
+}
+
 /// Configure the pallet-omniverse-protocol in pallets/omni-protocol.
 impl pallet_omniverse_protocol::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type ChainId = ChainId;
 }
 
 /// Configure the pallet-omniverse-swap in pallets/omni-swap.

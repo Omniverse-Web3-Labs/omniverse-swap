@@ -279,3 +279,30 @@ where
 			.saturating_mul_int(balance))
 	}
 }
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct OmniverseToken<AccountId> {
+	pub owner: AccountId,
+	pub owner_pk: [u8; 64],
+	pub token_id: Vec<u8>,
+	pub members: Vec<u8>,
+}
+
+impl<AccountId> OmniverseToken<AccountId> {
+	pub fn new(
+		owner: AccountId,
+		owner_pk: [u8; 64],
+		token_id: Vec<u8>,
+		members: Option<Vec<u8>>,
+	) -> Self {
+		Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<u8>::new()) }
+	}
+
+	pub fn add_members(&mut self, members: Vec<u8>) {
+		for m in &members {
+			if !self.members.contains(m) {
+				self.members.push(*m)
+			}
+		}
+	}
+}
