@@ -279,3 +279,57 @@ where
 			.saturating_mul_int(balance))
 	}
 }
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct OmniverseToken<AccountId> {
+	pub owner: AccountId,
+	pub owner_pk: [u8; 64],
+	pub token_id: Vec<u8>,
+	pub members: Vec<Vec<u8>>,
+}
+
+impl<AccountId> OmniverseToken<AccountId> {
+	pub fn new(
+		owner: AccountId,
+		owner_pk: [u8; 64],
+		token_id: Vec<u8>,
+		members: Option<Vec<Vec<u8>>>,
+	) -> Self {
+		Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<Vec<u8>>::new()) }
+	}
+
+	pub fn add_members(&mut self, members: Vec<Vec<u8>>) {
+		for m in members {
+			if !self.members.contains(&m) {
+				self.members.push(m)
+			}
+		}
+	}
+
+	pub fn is_member(&self, member: &Vec<u8>) -> bool {
+		for m in self.members.clone() {
+			if *member == m {
+				return true;
+			}
+		}
+		false
+	}
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct DelayedTx {
+	pub sender: [u8; 64],
+	pub nonce: u128,
+}
+
+impl DelayedTx {
+	pub fn new(sender: [u8; 64], nonce: u128) -> Self {
+		Self { sender, nonce }
+	}
+}
+
+impl Default for DelayedTx {
+	fn default() -> Self {
+		Self { sender: [0; 64], nonce: 0 }
+	}
+}

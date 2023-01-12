@@ -284,6 +284,7 @@ parameter_types! {
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OmniverseProtocol = OmniverseProtocol;
+	type Timestamp = Timestamp;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Currency = Balances;
@@ -322,9 +323,15 @@ impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 }
 
+parameter_types! {
+	pub ChainId: u8 = 1;
+}
+
 /// Configure the pallet-omniverse-protocol in pallets/omni-protocol.
 impl pallet_omniverse_protocol::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
+	type ChainId = ChainId;
+	type Timestamp = Timestamp;
 }
 
 /// Configure the pallet-omniverse-swap in pallets/omni-swap.

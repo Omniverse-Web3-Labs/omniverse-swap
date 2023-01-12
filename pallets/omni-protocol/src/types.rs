@@ -59,16 +59,22 @@ pub enum VerifyError {
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 pub struct OmniverseTokenProtocol {
 	pub nonce: u128,
-	pub chain_id: u8,
+	pub chain_id: u32,
 	pub from: [u8; 64],
-	pub to: Vec<u8>,
+	pub initiator_address: Vec<u8>,
 	pub data: Vec<u8>,
 	pub signature: [u8; 65],
 }
 
 impl OmniverseTokenProtocol {
-	pub fn new(nonce: u128, chain_id: u8, from: [u8; 64], to: Vec<u8>, data: Vec<u8>) -> Self {
-		Self { nonce, chain_id, from, to, data, signature: [0; 65] }
+	pub fn new(
+		nonce: u128,
+		chain_id: u32,
+		from: [u8; 64],
+		initiator_address: Vec<u8>,
+		data: Vec<u8>,
+	) -> Self {
+		Self { nonce, chain_id, from, initiator_address, data, signature: [0; 65] }
 	}
 
 	pub fn get_raw_hash(&self) -> [u8; 32] {
@@ -77,5 +83,29 @@ impl OmniverseTokenProtocol {
 
 	pub fn set_signature(&mut self, signature: [u8; 65]) {
 		self.signature = signature;
+	}
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct OmniverseTx {
+	pub tx_data: OmniverseTokenProtocol,
+	pub timestamp: u64,
+}
+
+impl OmniverseTx {
+	pub fn new(data: OmniverseTokenProtocol, timestamp: u64) -> Self {
+		Self { tx_data: data, timestamp }
+	}
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+pub struct EvilTxData {
+	pub tx_omni: OmniverseTx,
+	pub his_nonce: u128,
+}
+
+impl EvilTxData {
+	pub fn new(data: OmniverseTx, nonce: u128) -> Self {
+		Self { tx_omni: data, his_nonce: nonce }
 	}
 }

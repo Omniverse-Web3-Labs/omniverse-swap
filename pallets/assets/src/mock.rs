@@ -19,10 +19,12 @@
 
 use super::*;
 use crate as pallet_assets;
+use pallet_omniverse_protocol::OmniverseTx;
 
+use core::ops::AddAssign;
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{ConstU32, ConstU64, GenesisBuild},
+	traits::{ConstU32, ConstU64, GenesisBuild, UnixTime},
 };
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts, OmniverseTokenProtocol, VerifyError, VerifyResult,
@@ -32,6 +34,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use std::time::{Duration, SystemTime};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -87,11 +90,24 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 }
 
+pub static mut TRANSACTION_DATA: Option<OmniverseTx> = None;
+
 #[derive(Default)]
 pub struct OmniverseProtocol();
 
+impl OmniverseProtocol {
+	pub fn set_transaction_data(tx_data: Option<OmniverseTx>) {
+		unsafe {
+			TRANSACTION_DATA = tx_data;
+		}
+	}
+}
+
 impl OmniverseAccounts for OmniverseProtocol {
-	fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+	fn verify_transaction(
+		_token_id: &Vec<u8>,
+		data: &OmniverseTokenProtocol,
+	) -> Result<VerifyResult, VerifyError> {
 		if data.signature == [0; 65] {
 			return Err(VerifyError::SignatureError);
 		}
@@ -99,7 +115,7 @@ impl OmniverseAccounts for OmniverseProtocol {
 		Ok(VerifyResult::Success)
 	}
 
-	fn get_transaction_count(_pk: [u8; 64]) -> u128 {
+	fn get_transaction_count(_pk: [u8; 64], _token_id: Vec<u8>) -> u128 {
 		0
 	}
 
@@ -107,8 +123,16 @@ impl OmniverseAccounts for OmniverseProtocol {
 		false
 	}
 
-	fn get_chain_id() -> u8 {
+	fn get_chain_id() -> u32 {
 		1
+	}
+
+	fn get_transaction_data(_pk: [u8; 64], _nonce: u128) -> Option<OmniverseTx> {
+		unsafe { TRANSACTION_DATA.clone() }
+	}
+
+	fn get_cooling_down_time() -> u64 {
+		5
 	}
 }
 
@@ -128,6 +152,7 @@ impl Config for Test {
 	type WeightInfo = ();
 	type Extra = ();
 	type OmniverseProtocol = OmniverseProtocol;
+	type Timestamp = Timestamp;
 }
 
 use std::collections::HashMap;
@@ -173,6 +198,29 @@ impl FrozenBalance<u32, u64, u128> for TestFreezer {
 
 pub(crate) fn take_hooks() -> Vec<Hook> {
 	Hooks::take()
+}
+
+pub static mut TIME_PAST: u64 = 0;
+
+pub struct Timestamp {}
+
+impl Timestamp {
+	pub fn past(t: u64) {
+		unsafe {
+			TIME_PAST = TIME_PAST + t;
+		}
+	}
+}
+
+impl UnixTime for Timestamp {
+	fn now() -> core::time::Duration {
+		unsafe {
+			let mut now = SystemTime::now();
+			let dur = Duration::from_secs(TIME_PAST);
+			now.add_assign(dur);
+			now.duration_since(SystemTime::UNIX_EPOCH).unwrap()
+		}
+	}
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {

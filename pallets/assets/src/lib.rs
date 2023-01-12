@@ -169,9 +169,8 @@ type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use codec::{Decode, Encode};
-	use frame_support::pallet_prelude::*;
 	use frame_support::sp_runtime::traits::{One, Saturating};
+	use frame_support::{pallet_prelude::*, traits::UnixTime, BoundedVec};
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 
@@ -191,6 +190,8 @@ pub mod pallet {
 			+ IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type OmniverseProtocol: OmniverseAccounts;
+
+		type Timestamp: UnixTime;
 
 		/// The units in which we record balances.
 		type Balance: Member
@@ -263,6 +264,11 @@ pub mod pallet {
 		0
 	}
 
+	#[pallet::type_value]
+	pub fn GetDefaultDelayedIndex() -> (u32, u32) {
+		(0_u32, 0_u32)
+	}
+
 	#[pallet::storage]
 	/// Details of an asset.
 	pub(super) type Asset<T: Config<I>, I: 'static = ()> = StorageMap<
@@ -324,6 +330,16 @@ pub mod pallet {
 		ValueQuery,
 		GetDefaultValue,
 	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn delayed_transctions)]
+	pub type DelayedTransactions<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, u32, DelayedTx>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn delayed_index)]
+	pub type DelayedIndex<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, (u32, u32), ValueQuery, GetDefaultDelayedIndex>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn current_asset_id)]
@@ -530,7 +546,7 @@ pub mod pallet {
 		},
 		MembersSet {
 			token_id: Vec<u8>,
-			members: Vec<u8>,
+			members: Vec<Vec<u8>>,
 		},
 	}
 
@@ -582,6 +598,10 @@ pub mod pallet {
 		ProtocolSignerNotCaller,
 		ProtocolSignatureError,
 		ProtocolNonceError,
+		NoDelayedTx,
+		TxNotExisted,
+		NotExecutable,
+		DelayedTxNotExisted,
 	}
 
 	#[pallet::call]
@@ -1452,7 +1472,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			owner_pk: [u8; 64],
 			token_id: Vec<u8>,
-			members: Option<Vec<u8>>,
+			members: Option<Vec<Vec<u8>>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -1518,10 +1538,36 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
+		pub fn trigger_execution(origin: OriginFor<T>) -> DispatchResult {
+			ensure_signed(origin)?;
+
+			let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
+			ensure!(delayed_executing_index < delayed_index, Error::<T, I>::NoDelayedTx);
+
+			let delayed_tx = DelayedTransactions::<T, I>::get(delayed_executing_index)
+				.ok_or(Error::<T, I>::DelayedTxNotExisted)?;
+			let omni_tx =
+				T::OmniverseProtocol::get_transaction_data(delayed_tx.sender, delayed_tx.nonce)
+					.ok_or(Error::<T, I>::TxNotExisted)?;
+
+			let cur_st = T::Timestamp::now().as_secs();
+			ensure!(
+				cur_st > omni_tx.timestamp + T::OmniverseProtocol::get_cooling_down_time(),
+				Error::<T, I>::NotExecutable
+			);
+
+			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
+
+			Self::execute_transaction(&omni_tx.tx_data)?;
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
 		pub fn set_members(
 			origin: OriginFor<T>,
 			token_id: Vec<u8>,
-			members: Vec<u8>,
+			members: Vec<Vec<u8>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -1538,47 +1584,6 @@ pub mod pallet {
 			Self::deposit_event(Event::MembersSet { token_id, members });
 
 			Ok(())
-		}
-	}
-
-	impl<T: Config<I>, I: 'static> OmniverseTokenFactoryHandler for Pallet<T, I> {
-		fn send_transaction_external(
-			token_id: Vec<u8>,
-			data: &OmniverseTokenProtocol,
-		) -> Result<FactoryResult, DispatchError> {
-			// Check if the token exists.
-			let token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
-
-			Self::handle_transaction(token, data)?;
-
-			Ok(FactoryResult::Success)
-		}
-	}
-
-	#[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
-	pub struct OmniverseToken<AccountId> {
-		pub owner: AccountId,
-		pub owner_pk: [u8; 64],
-		pub token_id: Vec<u8>,
-		pub members: Vec<u8>,
-	}
-
-	impl<AccountId> OmniverseToken<AccountId> {
-		fn new(
-			owner: AccountId,
-			owner_pk: [u8; 64],
-			token_id: Vec<u8>,
-			members: Option<Vec<u8>>,
-		) -> Self {
-			Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<u8>::new()) }
-		}
-
-		fn add_members(&mut self, members: Vec<u8>) {
-			for m in &members {
-				if !self.members.contains(m) {
-					self.members.push(*m)
-				}
-			}
 		}
 	}
 }

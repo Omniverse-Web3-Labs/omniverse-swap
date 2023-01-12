@@ -5,7 +5,7 @@ use pallet_omniverse_protocol::{OmniverseTokenProtocol, TokenOpcode, TransferTok
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
 
-const CHAIN_ID: u8 = 1;
+const CHAIN_ID: u32 = 1;
 const TOKEN_ID: Vec<u8> = Vec::<u8>::new();
 
 fn get_sig_slice(sig: &RecoverableSignature) -> [u8; 65] {
