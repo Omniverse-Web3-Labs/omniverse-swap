@@ -643,6 +643,8 @@ fn it_fails_for_factory_handler_mint_with_signer_not_owner() {
 		));
 
 		let (secret_key_to, public_key_to) = secp.generate_keypair(&mut OsRng);
+		let to = get_account_id_from_pk(public_key_to.serialize().as_slice());
+		
 		let data = encode_mint(&secp, (secret_key_to, public_key_to), public_key_to, 1, nonce);
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
@@ -724,6 +726,8 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
+		let to = get_account_id_from_pk(public_key_to.serialize().as_slice());
+		fund_account(to);
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
