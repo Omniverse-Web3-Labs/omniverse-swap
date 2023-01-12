@@ -1,13 +1,13 @@
 use crate as pallet_omniverse_protocol;
 use frame_support::parameter_types;
-use frame_system as system;
 use frame_support::traits::UnixTime;
+use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use std::time::{SystemTime};
+use std::time::SystemTime;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

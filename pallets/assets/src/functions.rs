@@ -889,6 +889,23 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		// Verify the signature
 		let ret = T::OmniverseProtocol::verify_transaction(&omniverse_token.token_id, &data);
+
+		// Verify balance
+		{
+			let id = TokenId2AssetId::<T, I>::get(&data.initiator_address)
+				.ok_or(Error::<T, I>::Unknown)?;
+			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
+			let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+			// Convert public key to account id
+			let source = Self::to_account(&data.from)?;
+			let dest = Self::to_account(&transfer_data.to)?;
+			let amount = T::Balance::try_from(transfer_data.amount)
+				.unwrap_or(<T as Config<I>>::Balance::default());
+			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
+			let debit = Self::prep_debit(id, &source, amount, f.into())?;
+			Self::prep_credit(id, &dest, amount, debit, f.burn_dust)?;
+		}
+
 		match ret {
 			Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
 			Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
@@ -922,7 +939,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// Convert public key to account id
 		let dest = Self::to_account(&transfer_data.to)?;
 		let origin = Self::to_account(&data.from)?;
-		// TODO Balance size u32, transfer_data.amount size u128
 		let amount = T::Balance::try_from(transfer_data.amount)
 			.unwrap_or(<T as Config<I>>::Balance::default());
 		let id =

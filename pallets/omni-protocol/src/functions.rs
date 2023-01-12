@@ -1,12 +1,12 @@
-use super::*;
 use super::traits::*;
+use super::*;
 use crate::{MintTokenOp, OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, MINT, TRANSFER};
 use codec::Decode;
-use sp_core::Hasher;
 use frame_support::traits::{Get, UnixTime};
-use sp_runtime::{traits::Keccak256};
-use sp_std::vec::Vec;
+use sp_core::Hasher;
 use sp_io::crypto;
+use sp_runtime::traits::Keccak256;
+use sp_std::vec::Vec;
 
 pub fn get_transaction_hash(data: &OmniverseTokenProtocol) -> [u8; 32] {
 	let mut raw = Vec::<u8>::new();
@@ -36,7 +36,10 @@ pub fn get_transaction_hash(data: &OmniverseTokenProtocol) -> [u8; 32] {
 }
 
 impl<T: Config> OmniverseAccounts for Pallet<T> {
-	fn verify_transaction(token_id: &Vec<u8>, data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+	fn verify_transaction(
+		token_id: &Vec<u8>,
+		data: &OmniverseTokenProtocol,
+	) -> Result<VerifyResult, VerifyError> {
 		let nonce = TransactionCount::<T>::get(&data.from, token_id);
 
 		let tx_hash_bytes = super::functions::get_transaction_hash(&data);
@@ -96,7 +99,7 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 	fn get_chain_id() -> u32 {
 		T::ChainId::get()
 	}
-	
+
 	fn get_transaction_data(pk: [u8; 64], nonce: u128) -> Option<OmniverseTx> {
 		TransactionRecorder::<T>::get(pk, nonce)
 	}

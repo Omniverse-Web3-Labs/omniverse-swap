@@ -63,7 +63,10 @@ fn it_fails_for_signature_error() {
 		// Set a wrong signature
 		data.set_signature([0; 65]);
 
-		assert_err!(OmniverseProtocol::verify_transaction(&Vec::new(), &data), VerifyError::SignatureError);
+		assert_err!(
+			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
+			VerifyError::SignatureError
+		);
 	});
 }
 
@@ -82,7 +85,10 @@ fn it_fails_for_signer_not_caller_error() {
 		let (new_secret_key, _) = secp.generate_keypair(&mut OsRng);
 		let data = encode_transaction(&secp, (new_secret_key, public_key), nonce);
 
-		assert_err!(OmniverseProtocol::verify_transaction(&Vec::new(), &data), VerifyError::SignerNotCaller);
+		assert_err!(
+			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
+			VerifyError::SignerNotCaller
+		);
 	});
 }
 
@@ -100,7 +106,10 @@ fn it_fails_for_nonce_error() {
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce);
 
-		assert_err!(OmniverseProtocol::verify_transaction(&Vec::new(), &data), VerifyError::NonceError);
+		assert_err!(
+			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
+			VerifyError::NonceError
+		);
 	});
 }
 

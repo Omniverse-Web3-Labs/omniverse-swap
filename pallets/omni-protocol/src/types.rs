@@ -67,7 +67,13 @@ pub struct OmniverseTokenProtocol {
 }
 
 impl OmniverseTokenProtocol {
-	pub fn new(nonce: u128, chain_id: u32, from: [u8; 64], initiator_address: Vec<u8>, data: Vec<u8>) -> Self {
+	pub fn new(
+		nonce: u128,
+		chain_id: u32,
+		from: [u8; 64],
+		initiator_address: Vec<u8>,
+		data: Vec<u8>,
+	) -> Self {
 		Self { nonce, chain_id, from, initiator_address, data, signature: [0; 65] }
 	}
 
@@ -88,7 +94,7 @@ pub struct OmniverseTx {
 
 impl OmniverseTx {
 	pub fn new(data: OmniverseTokenProtocol, timestamp: u64) -> Self {
-		Self { tx_data: data, timestamp}
+		Self { tx_data: data, timestamp }
 	}
 }
 

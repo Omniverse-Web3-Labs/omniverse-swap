@@ -55,9 +55,20 @@ pub mod pallet {
 	#[pallet::getter(fn transaction_count)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type TransactionCount<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, [u8; 64], Blake2_128Concat, Vec<u8>, u128, ValueQuery, GetDefaultValue>;
-		// StorageMap<_, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
+	// key_1: omniverse account
+	// key_2: omniverse token id
+	// value: the nonce of the transaction related to the key_2 (token id)
+	pub type TransactionCount<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		[u8; 64],
+		Blake2_128Concat,
+		Vec<u8>,
+		u128,
+		ValueQuery,
+		GetDefaultValue,
+	>;
+	// StorageMap<_, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn evil_recorder)]
