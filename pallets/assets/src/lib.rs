@@ -169,8 +169,8 @@ type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{pallet_prelude::*, BoundedVec, traits::UnixTime};
 	use frame_support::sp_runtime::traits::{One, Saturating};
+	use frame_support::{pallet_prelude::*, traits::UnixTime, BoundedVec};
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 
@@ -333,16 +333,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn delayed_transctions)]
-	pub type DelayedTransactions<T: Config<I>, I: 'static = ()> = StorageMap<
-		_,
-		Blake2_128Concat,
-		u32,
-		DelayedTx,
-	>;
+	pub type DelayedTransactions<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, u32, DelayedTx>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn delayed_index)]
-	pub type DelayedIndex<T: Config<I>, I: 'static = ()> = StorageValue<_, (u32, u32), ValueQuery, GetDefaultDelayedIndex>;
+	pub type DelayedIndex<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, (u32, u32), ValueQuery, GetDefaultDelayedIndex>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn current_asset_id)]
@@ -549,7 +546,7 @@ pub mod pallet {
 		},
 		MembersSet {
 			token_id: Vec<u8>,
-			members: Vec<u8>,
+			members: Vec<Vec<u8>>,
 		},
 	}
 
@@ -1475,7 +1472,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			owner_pk: [u8; 64],
 			token_id: Vec<u8>,
-			members: Option<Vec<u8>>,
+			members: Option<Vec<Vec<u8>>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -1547,11 +1544,17 @@ pub mod pallet {
 			let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
 			ensure!(delayed_executing_index < delayed_index, Error::<T, I>::NoDelayedTx);
 
-			let delayed_tx = DelayedTransactions::<T, I>::get(delayed_executing_index).ok_or(Error::<T, I>::DelayedTxNotExisted)?;
-			let omni_tx = T::OmniverseProtocol::get_transaction_data(delayed_tx.sender, delayed_tx.nonce).ok_or(Error::<T, I>::TxNotExisted)?;
+			let delayed_tx = DelayedTransactions::<T, I>::get(delayed_executing_index)
+				.ok_or(Error::<T, I>::DelayedTxNotExisted)?;
+			let omni_tx =
+				T::OmniverseProtocol::get_transaction_data(delayed_tx.sender, delayed_tx.nonce)
+					.ok_or(Error::<T, I>::TxNotExisted)?;
 
 			let cur_st = T::Timestamp::now().as_secs();
-			ensure!(cur_st > omni_tx.timestamp + T::OmniverseProtocol::get_cooling_down_time(), Error::<T, I>::NotExecutable);
+			ensure!(
+				cur_st > omni_tx.timestamp + T::OmniverseProtocol::get_cooling_down_time(),
+				Error::<T, I>::NotExecutable
+			);
 
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
@@ -1564,7 +1567,7 @@ pub mod pallet {
 		pub fn set_members(
 			origin: OriginFor<T>,
 			token_id: Vec<u8>,
-			members: Vec<u8>,
+			members: Vec<Vec<u8>>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 

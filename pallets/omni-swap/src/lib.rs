@@ -382,7 +382,8 @@ pub mod pallet {
 					ensure!(transfer_data.amount <= balance_x, Error::<T>::InsufficientAmount);
 					let (token_x_id, _) =
 						TokenId::<T>::get(&trading_pair).ok_or(Error::<T>::TokenIdNotExist)?;
-					ensure!(data.to == token_x_id, Error::<T>::MismatchTokenId);
+					// TODO
+					// ensure!(data.initiator_address == token_x_id, Error::<T>::MismatchTokenId);
 					T::OmniverseToken::send_transaction_external(token_x_id, &data)
 						.ok()
 						.ok_or(Error::<T>::OmniverseTransferXFailed)?;
@@ -408,7 +409,8 @@ pub mod pallet {
 					ensure!(transfer_data.amount <= balance_y, Error::<T>::InsufficientAmount);
 					let (_, token_y_id) =
 						TokenId::<T>::get(&trading_pair).ok_or(Error::<T>::TokenIdNotExist)?;
-					ensure!(data.to == token_y_id, Error::<T>::MismatchTokenId);
+					// TODO
+					// ensure!(data.initiator_address == token_y_id, Error::<T>::MismatchTokenId);
 					T::OmniverseToken::send_transaction_external(token_y_id, &data)
 						.ok()
 						.ok_or(Error::<T>::OmniverseTransferYFailed)?;

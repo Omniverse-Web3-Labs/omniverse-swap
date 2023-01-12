@@ -59,16 +59,16 @@ pub enum VerifyError {
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 pub struct OmniverseTokenProtocol {
 	pub nonce: u128,
-	pub chain_id: u8,
+	pub chain_id: u32,
 	pub from: [u8; 64],
-	pub to: Vec<u8>,
+	pub initiator_address: Vec<u8>,
 	pub data: Vec<u8>,
 	pub signature: [u8; 65],
 }
 
 impl OmniverseTokenProtocol {
-	pub fn new(nonce: u128, chain_id: u8, from: [u8; 64], to: Vec<u8>, data: Vec<u8>) -> Self {
-		Self { nonce, chain_id, from, to, data, signature: [0; 65] }
+	pub fn new(nonce: u128, chain_id: u32, from: [u8; 64], initiator_address: Vec<u8>, data: Vec<u8>) -> Self {
+		Self { nonce, chain_id, from, initiator_address, data, signature: [0; 65] }
 	}
 
 	pub fn get_raw_hash(&self) -> [u8; 32] {

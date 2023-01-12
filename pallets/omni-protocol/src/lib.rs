@@ -28,7 +28,7 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		#[pallet::constant]
-		type ChainId: Get<u8>;
+		type ChainId: Get<u32>;
 		type Timestamp: UnixTime;
 	}
 
@@ -56,7 +56,8 @@ pub mod pallet {
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
 	pub type TransactionCount<T: Config> =
-		StorageMap<_, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
+		StorageDoubleMap<_, Blake2_128Concat, [u8; 64], Blake2_128Concat, Vec<u8>, u128, ValueQuery, GetDefaultValue>;
+		// StorageMap<_, Blake2_128Concat, [u8; 64], u128, ValueQuery, GetDefaultValue>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn evil_recorder)]

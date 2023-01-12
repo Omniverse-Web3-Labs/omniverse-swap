@@ -17,8 +17,8 @@
 
 //! Functions for the Assets pallet.
 
-use super::*;
 use super::traits::OmniverseTokenFactoryHandler;
+use super::*;
 use codec::Decode;
 use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
@@ -879,13 +879,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		data: &OmniverseTokenProtocol,
 	) -> Result<FactoryResult, DispatchError> {
 		// Check if the tx destination is correct
-		ensure!(data.to == omniverse_token.token_id, Error::<T, I>::WrongDestination);
+		ensure!(
+			omniverse_token.is_member(&data.initiator_address),
+			Error::<T, I>::WrongDestination
+		);
 
 		// Check if the sender is honest
 		ensure!(!T::OmniverseProtocol::is_malicious(data.from), Error::<T, I>::UserIsMalicious);
 
 		// Verify the signature
-		let ret = T::OmniverseProtocol::verify_transaction(&data);
+		let ret = T::OmniverseProtocol::verify_transaction(&omniverse_token.token_id, &data);
 		match ret {
 			Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
 			Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
@@ -898,16 +901,20 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			Err(VerifyError::NonceError) => return Err(Error::<T, I>::ProtocolNonceError.into()),
 			Ok(VerifyResult::Success) => {
 				let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
-				DelayedTransactions::<T, I>::insert(delayed_index, DelayedTx::new(data.from, data.nonce));
+				DelayedTransactions::<T, I>::insert(
+					delayed_index,
+					DelayedTx::new(data.from, data.nonce),
+				);
 				DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
-			}
+			},
 		}
 
 		Ok(FactoryResult::Success)
 	}
 
 	pub(super) fn execute_transaction(data: &OmniverseTokenProtocol) -> Result<(), DispatchError> {
-		let omniverse_token = TokensInfo::<T, I>::get(&data.to).ok_or(Error::<T, I>::Unknown)?;
+		let omniverse_token =
+			TokensInfo::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
 
 		// Execute
 		let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
@@ -918,7 +925,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// TODO Balance size u32, transfer_data.amount size u128
 		let amount = T::Balance::try_from(transfer_data.amount)
 			.unwrap_or(<T as Config<I>>::Balance::default());
-		let id = TokenId2AssetId::<T, I>::get(&data.to).ok_or(Error::<T, I>::Unknown)?;
+		let id =
+			TokenId2AssetId::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
 
 		if op_data.op == TRANSFER {
 			Self::omniverse_transfer(

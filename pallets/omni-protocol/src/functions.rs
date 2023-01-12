@@ -11,9 +11,9 @@ use sp_io::crypto;
 pub fn get_transaction_hash(data: &OmniverseTokenProtocol) -> [u8; 32] {
 	let mut raw = Vec::<u8>::new();
 	raw.extend_from_slice(&mut u128::to_be_bytes(data.nonce).as_slice());
-	raw.extend_from_slice(&mut u8::to_be_bytes(data.chain_id).as_slice());
+	raw.extend_from_slice(&mut u32::to_be_bytes(data.chain_id).as_slice());
 	raw.extend_from_slice(&mut data.from.clone());
-	raw.append(&mut data.to.clone().as_mut());
+	raw.append(&mut data.initiator_address.clone().as_mut());
 
 	let mut bytes_data = Vec::<u8>::new();
 	let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
@@ -36,8 +36,8 @@ pub fn get_transaction_hash(data: &OmniverseTokenProtocol) -> [u8; 32] {
 }
 
 impl<T: Config> OmniverseAccounts for Pallet<T> {
-	fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
-		let nonce = TransactionCount::<T>::get(&data.from);
+	fn verify_transaction(token_id: &Vec<u8>, data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+		let nonce = TransactionCount::<T>::get(&data.from, token_id);
 
 		let tx_hash_bytes = super::functions::get_transaction_hash(&data);
 
@@ -53,7 +53,7 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 			// Add to transaction recorder
 			let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
 			TransactionRecorder::<T>::insert(&data.from, &nonce, omni_tx);
-			TransactionCount::<T>::insert(&data.from, nonce + 1);
+			TransactionCount::<T>::insert(&data.from, token_id, nonce + 1);
 			if data.chain_id == T::ChainId::get() {
 				Self::deposit_event(Event::TransactionSent(data.from, nonce));
 			}
@@ -78,8 +78,8 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		}
 	}
 
-	fn get_transaction_count(pk: [u8; 64]) -> u128 {
-		Self::transaction_count(pk)
+	fn get_transaction_count(pk: [u8; 64], token_id: Vec<u8>) -> u128 {
+		Self::transaction_count(pk, token_id)
 	}
 
 	fn is_malicious(pk: [u8; 64]) -> bool {
@@ -93,7 +93,7 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		false
 	}
 
-	fn get_chain_id() -> u8 {
+	fn get_chain_id() -> u32 {
 		T::ChainId::get()
 	}
 	

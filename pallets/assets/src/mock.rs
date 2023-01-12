@@ -18,9 +18,10 @@
 //! Test environment for Assets pallet.
 
 use super::*;
-use pallet_omniverse_protocol::OmniverseTx;
 use crate as pallet_assets;
+use pallet_omniverse_protocol::OmniverseTx;
 
+use core::ops::AddAssign;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{ConstU32, ConstU64, GenesisBuild, UnixTime},
@@ -33,7 +34,6 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use core::ops::{AddAssign};
 use std::time::{Duration, SystemTime};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -104,7 +104,10 @@ impl OmniverseProtocol {
 }
 
 impl OmniverseAccounts for OmniverseProtocol {
-	fn verify_transaction(data: &OmniverseTokenProtocol) -> Result<VerifyResult, VerifyError> {
+	fn verify_transaction(
+		_token_id: &Vec<u8>,
+		data: &OmniverseTokenProtocol,
+	) -> Result<VerifyResult, VerifyError> {
 		if data.signature == [0; 65] {
 			return Err(VerifyError::SignatureError);
 		}
@@ -112,7 +115,7 @@ impl OmniverseAccounts for OmniverseProtocol {
 		Ok(VerifyResult::Success)
 	}
 
-	fn get_transaction_count(_pk: [u8; 64]) -> u128 {
+	fn get_transaction_count(_pk: [u8; 64], _token_id: Vec<u8>) -> u128 {
 		0
 	}
 
@@ -120,14 +123,12 @@ impl OmniverseAccounts for OmniverseProtocol {
 		false
 	}
 
-	fn get_chain_id() -> u8 {
+	fn get_chain_id() -> u32 {
 		1
 	}
 
 	fn get_transaction_data(_pk: [u8; 64], _nonce: u128) -> Option<OmniverseTx> {
-		unsafe {
-			TRANSACTION_DATA.clone()
-		}
+		unsafe { TRANSACTION_DATA.clone() }
 	}
 
 	fn get_cooling_down_time() -> u64 {
@@ -201,8 +202,7 @@ pub(crate) fn take_hooks() -> Vec<Hook> {
 
 pub static mut TIME_PAST: u64 = 0;
 
-pub struct Timestamp {
-}
+pub struct Timestamp {}
 
 impl Timestamp {
 	pub fn past(t: u64) {

@@ -21,7 +21,10 @@ use super::traits::OmniverseTokenFactoryHandler;
 use super::*;
 use crate::{mock::*, Error};
 use codec::{Decode, Encode};
-use frame_support::{assert_err, assert_noop, assert_ok, traits::{Currency, UnixTime}};
+use frame_support::{
+	assert_err, assert_noop, assert_ok,
+	traits::{Currency, UnixTime},
+};
 use pallet_balances::Error as BalancesError;
 use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
@@ -285,7 +288,13 @@ fn set_metadata_should_work() {
 
 		// Cannot over-reserve
 		assert_noop!(
-			Assets::set_metadata(RuntimeOrigin::signed(account), 0, vec![0u8; 20], vec![0u8; 20], 12),
+			Assets::set_metadata(
+				RuntimeOrigin::signed(account),
+				0,
+				vec![0u8; 20],
+				vec![0u8; 20],
+				12
+			),
 			BalancesError::<Test, _>::InsufficientBalance,
 		);
 
@@ -295,7 +304,10 @@ fn set_metadata_should_work() {
 			Assets::clear_metadata(RuntimeOrigin::signed(2), 0),
 			Error::<Test>::NoPermission
 		);
-		assert_noop!(Assets::clear_metadata(RuntimeOrigin::signed(account), 1), Error::<Test>::Unknown);
+		assert_noop!(
+			Assets::clear_metadata(RuntimeOrigin::signed(account), 1),
+			Error::<Test>::Unknown
+		);
 		assert_ok!(Assets::clear_metadata(RuntimeOrigin::signed(account), 0));
 		assert!(!Metadata::<Test>::contains_key(0));
 	});
@@ -313,7 +325,7 @@ fn force_metadata_should_work() {
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
 		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None));
-		
+
 		assert_ok!(Assets::force_set_metadata(
 			RuntimeOrigin::root(),
 			0,
@@ -388,7 +400,7 @@ fn force_metadata_should_work() {
 }
 
 // tests of omniverse tokens
-const CHAIN_ID: u8 = 1;
+const CHAIN_ID: u32 = 1;
 const TOKEN_ID: Vec<u8> = Vec::<u8>::new();
 const COOL_DOWN: u64 = 10;
 
@@ -507,7 +519,7 @@ fn it_fails_for_create_token_with_token_already_exist() {
 fn it_fails_for_set_members_with_token_not_exist() {
 	new_test_ext().execute_with(|| {
 		assert_err!(
-			Assets::set_members(RuntimeOrigin::signed(1), vec![1], vec![1]),
+			Assets::set_members(RuntimeOrigin::signed(1), vec![1], vec![vec![1]]),
 			Error::<Test>::Unknown
 		);
 	});
@@ -531,9 +543,9 @@ fn it_works_for_set_members() {
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
 		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None));
-		assert_ok!(Assets::set_members(RuntimeOrigin::signed(1), vec![1], vec![1]));
+		assert_ok!(Assets::set_members(RuntimeOrigin::signed(1), vec![1], vec![vec![1]]));
 		let token_info = Assets::tokens_info(vec![1]).unwrap();
-		assert!(token_info.members == vec![1]);
+		assert!(token_info.members == vec![vec![1]]);
 	});
 }
 
@@ -546,7 +558,7 @@ fn it_fails_for_factory_handler_with_token_not_exist() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk);
+		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
 
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key, 1, nonce);
 		assert_err!(Assets::send_transaction_external(vec![1], &data), Error::<Test>::Unknown);
@@ -562,7 +574,7 @@ fn it_fails_for_factory_handler_with_wrong_destination() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk);
+		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
@@ -587,12 +599,17 @@ fn it_fails_for_factory_handler_with_signature_error() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk);
+		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+		assert_ok!(Assets::create_token(
+			RuntimeOrigin::signed(1),
+			pk,
+			TOKEN_ID,
+			Some(vec![vec![]])
+		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let mut data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
@@ -613,21 +630,25 @@ fn it_fails_for_factory_handler_mint_with_signer_not_owner() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk);
+		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+		assert_ok!(Assets::create_token(
+			RuntimeOrigin::signed(1),
+			pk,
+			TOKEN_ID,
+			Some(vec![vec![]])
+		));
 
 		let (secret_key_to, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let data = encode_mint(&secp, (secret_key_to, public_key_to), public_key_to, 1, nonce);
-		assert_ok!(
-			Assets::send_transaction_external(TOKEN_ID, &data)
-		);
+		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			data, Timestamp::now().as_secs()
+			data,
+			Timestamp::now().as_secs(),
 		)));
 
 		// Delay
@@ -648,12 +669,17 @@ fn it_works_for_factory_handler_mint() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk);
+		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+		assert_ok!(Assets::create_token(
+			RuntimeOrigin::signed(1),
+			pk,
+			TOKEN_ID,
+			Some(vec![vec![]])
+		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let account_to = get_account_id_from_pk(public_key_to.serialize().as_slice());
@@ -662,14 +688,13 @@ fn it_works_for_factory_handler_mint() {
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			data, Timestamp::now().as_secs()
+			data,
+			Timestamp::now().as_secs(),
 		)));
 
 		// Delay
 		Timestamp::past(COOL_DOWN);
-		assert_ok!(
-			Assets::trigger_execution(RuntimeOrigin::signed(1))
-		);
+		assert_ok!(Assets::trigger_execution(RuntimeOrigin::signed(1)));
 
 		let pk_to: [u8; 64] = public_key_to.serialize_uncompressed()[1..].try_into().expect("");
 		let token = Assets::tokens(TOKEN_ID, pk_to);
@@ -686,27 +711,30 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk);
+		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+		assert_ok!(Assets::create_token(
+			RuntimeOrigin::signed(1),
+			pk,
+			TOKEN_ID,
+			Some(vec![vec![]])
+		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			data, Timestamp::now().as_secs()
+			data,
+			Timestamp::now().as_secs(),
 		)));
 
 		// Delay
 		Timestamp::past(COOL_DOWN);
-		assert_err!(
-			Assets::trigger_execution(RuntimeOrigin::signed(1)),
-			Error::<Test>::BalanceLow
-		);
+		assert_err!(Assets::trigger_execution(RuntimeOrigin::signed(1)), Error::<Test>::BalanceLow);
 	});
 }
 
@@ -719,42 +747,45 @@ fn it_works_for_factory_handler_transfer() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk);
+		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, TOKEN_ID, None));
+		assert_ok!(Assets::create_token(
+			RuntimeOrigin::signed(1),
+			pk,
+			TOKEN_ID,
+			Some(vec![vec![]])
+		));
 
 		// Mint token
 		let mint_data = encode_mint(&secp, (secret_key, public_key), public_key, 10, nonce);
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &mint_data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			mint_data, Timestamp::now().as_secs()
+			mint_data,
+			Timestamp::now().as_secs(),
 		)));
 
 		// Delay
 		Timestamp::past(COOL_DOWN);
-		assert_ok!(
-			Assets::trigger_execution(RuntimeOrigin::signed(1))
-		);
+		assert_ok!(Assets::trigger_execution(RuntimeOrigin::signed(1)));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let account_to = get_account_id_from_pk(public_key_to.serialize().as_slice());
 		fund_account(account_to);
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
-		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));	
+		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			data, Timestamp::now().as_secs()
+			data,
+			Timestamp::now().as_secs(),
 		)));
 
 		// Delay
 		Timestamp::past(COOL_DOWN);
-		assert_ok!(
-			Assets::trigger_execution(RuntimeOrigin::signed(1))
-		);
+		assert_ok!(Assets::trigger_execution(RuntimeOrigin::signed(1)));
 
 		assert_eq!(Assets::tokens(TOKEN_ID, &pk), 9);
 		let pk_to: [u8; 64] = public_key_to.serialize_uncompressed()[1..].try_into().expect("");

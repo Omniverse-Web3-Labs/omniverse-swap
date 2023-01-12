@@ -57,7 +57,7 @@ impl system::Config for Test {
 }
 
 parameter_types! {
-	pub ChainId: u8 = 1;
+	pub ChainId: u32 = 1;
 }
 
 impl pallet_omniverse_protocol::Config for Test {
