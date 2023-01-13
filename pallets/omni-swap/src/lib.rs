@@ -22,7 +22,7 @@ pub mod pallet {
 	// use sp_runtime::traits::TrailingZeroInput;
 	use pallet_assets::traits::OmniverseTokenFactoryHandler;
 	use pallet_omniverse_protocol::{
-		OmniverseTokenProtocol, TransferTokenOp, TRANSFER,
+		OmniverseTransactionData, TransferTokenOp, TRANSFER,
 	};
 	use sp_runtime::traits::IntegerSquareRoot;
 
@@ -115,7 +115,7 @@ pub mod pallet {
 			tokens_sold: u128,
 			min_token: u128,
 			token_x_id: Vec<u8>,
-			token_x_data: OmniverseTokenProtocol,
+			token_x_data: OmniverseTransactionData,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
@@ -161,7 +161,7 @@ pub mod pallet {
 			tokens_sold: u128,
 			min_token: u128,
 			token_y_id: Vec<u8>,
-			token_y_data: OmniverseTokenProtocol,
+			token_y_data: OmniverseTransactionData,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			ensure!(tokens_sold > 0 && min_token > 0, Error::<T>::InvalidValue);
@@ -208,9 +208,9 @@ pub mod pallet {
 			amount_x_min: u128,
 			amount_y_min: u128,
 			token_x_id: Vec<u8>,
-			token_x_data: OmniverseTokenProtocol,
+			token_x_data: OmniverseTransactionData,
 			token_y_id: Vec<u8>,
-			token_y_data: OmniverseTokenProtocol,
+			token_y_data: OmniverseTransactionData,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			ensure!(amount_x_desired > 0 && amount_y_desired > 0, Error::<T>::InvalidValue);
@@ -370,7 +370,7 @@ pub mod pallet {
 		pub fn transfer_x_token(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
-			data: OmniverseTokenProtocol,
+			data: OmniverseTransactionData,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y
@@ -397,7 +397,7 @@ pub mod pallet {
 		pub fn transfer_y_token(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
-			data: OmniverseTokenProtocol,
+			data: OmniverseTransactionData,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y

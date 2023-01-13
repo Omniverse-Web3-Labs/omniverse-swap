@@ -57,7 +57,7 @@ pub enum VerifyError {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
-pub struct OmniverseTokenProtocol {
+pub struct OmniverseTransactionData {
 	pub nonce: u128,
 	pub chain_id: u32,
 	pub initiator_address: Vec<u8>,
@@ -67,7 +67,7 @@ pub struct OmniverseTokenProtocol {
 	pub signature: [u8; 65],
 }
 
-impl OmniverseTokenProtocol {
+impl OmniverseTransactionData {
 	pub fn new(
 		nonce: u128,
 		chain_id: u32,
@@ -90,12 +90,12 @@ impl OmniverseTokenProtocol {
 
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 pub struct OmniverseTx {
-	pub tx_data: OmniverseTokenProtocol,
+	pub tx_data: OmniverseTransactionData,
 	pub timestamp: u64,
 }
 
 impl OmniverseTx {
-	pub fn new(data: OmniverseTokenProtocol, timestamp: u64) -> Self {
+	pub fn new(data: OmniverseTransactionData, timestamp: u64) -> Self {
 		Self { tx_data: data, timestamp }
 	}
 }

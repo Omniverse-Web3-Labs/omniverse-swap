@@ -28,8 +28,7 @@ use frame_support::{
 use pallet_balances::Error as BalancesError;
 use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
-	traits::OmniverseAccounts, MintTokenOp, OmniverseTokenProtocol, TokenOpcode, TransferTokenOp,
-	MINT, TRANSFER,
+	traits::OmniverseAccounts, MintTokenOp, OmniverseTransactionData, TransferTokenOp, MINT, TRANSFER,
 };
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
@@ -402,6 +401,7 @@ fn force_metadata_should_work() {
 // tests of omniverse tokens
 const CHAIN_ID: u32 = 1;
 const TOKEN_ID: Vec<u8> = Vec::<u8>::new();
+const INITIATOR_ADDRESS: Vec<u8> = Vec::<u8>::new();
 const COOL_DOWN: u64 = 10;
 
 fn get_account_id_from_pk(pk: &[u8]) -> <Test as frame_system::Config>::AccountId {
@@ -411,7 +411,7 @@ fn get_account_id_from_pk(pk: &[u8]) -> <Test as frame_system::Config>::AccountI
 }
 
 fn fund_account(account: <Test as frame_system::Config>::AccountId) {
-	assert_ok!(Balances::transfer(RuntimeOrigin::signed(1), account, 100));
+	assert_ok!(Balances::transfer(RuntimeOrigin::signed(1), account, 50));
 }
 
 fn get_sig_slice(sig: &RecoverableSignature) -> [u8; 65] {
@@ -428,12 +428,12 @@ fn encode_transfer(
 	to: PublicKey,
 	amount: u128,
 	nonce: u128,
-) -> OmniverseTokenProtocol {
+) -> OmniverseTransactionData {
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
-	let transfer_data = TransferTokenOp::new(pk_to, amount).encode();
-	let data = TokenOpcode::new(TRANSFER, transfer_data).encode();
-	let mut tx_data = OmniverseTokenProtocol::new(nonce, CHAIN_ID, pk_from, TOKEN_ID, data);
+	let op_data = TransferTokenOp::new(pk_to, amount).encode();
+	let mut tx_data =
+		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, TRANSFER, op_data);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
@@ -449,12 +449,12 @@ fn encode_mint(
 	to: PublicKey,
 	amount: u128,
 	nonce: u128,
-) -> OmniverseTokenProtocol {
+) -> OmniverseTransactionData {
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
-	let transfer_data = MintTokenOp::new(pk_to, amount).encode();
-	let data = TokenOpcode::new(MINT, transfer_data).encode();
-	let mut tx_data = OmniverseTokenProtocol::new(nonce, CHAIN_ID, pk_from, TOKEN_ID, data);
+	let op_data = MintTokenOp::new(pk_to, amount).encode();
+	let mut tx_data =
+		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, MINT, op_data);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
@@ -468,16 +468,16 @@ fn encode_mint(
 fn it_works_for_decode() {
 	new_test_ext().execute_with(|| {
 		let data = [
-			3, 65, 1, 123, 189, 136, 115, 207, 195, 13, 61, 222, 226, 167, 169, 220, 210, 181, 179,
+			65, 1, 123, 189, 136, 115, 207, 195, 13, 61, 222, 226, 167, 169, 220, 210, 181, 179,
 			153, 184, 93, 171, 135, 192, 17, 173, 75, 233, 111, 230, 150, 37, 67, 14, 63, 19, 148,
 			114, 7, 255, 78, 89, 91, 67, 238, 127, 43, 205, 103, 208, 179, 37, 39, 55, 40, 111,
 			234, 152, 103, 135, 234, 57, 187, 219, 106, 181, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0,
 		];
 
-		let token_op = TokenOpcode::decode(&mut data.as_slice()).unwrap();
-		println!("{:?}", token_op);
-		let mint_op = MintTokenOp::decode(&mut token_op.data.as_slice());
+		// let token_op = TokenOpcode::decode(&mut data.as_slice()).unwrap();
+		// println!("{:?}", token_op);
+		let mint_op = MintTokenOp::decode(&mut data.as_slice());
 		println!("{:?}", mint_op);
 	});
 }
@@ -612,6 +612,22 @@ fn it_fails_for_factory_handler_with_signature_error() {
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
+		let to = get_account_id_from_pk(public_key.serialize().as_slice());
+		fund_account(to);
+
+		// Mint token
+		let mint_data = encode_mint(&secp, (secret_key, public_key), public_key, 100, nonce);
+		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &mint_data));
+
+		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
+			mint_data,
+			Timestamp::now().as_secs(),
+		)));
+
+		// Delay
+		Timestamp::past(COOL_DOWN);
+		assert_ok!(Assets::trigger_execution(RuntimeOrigin::signed(1)));
+
 		let mut data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
 		data.signature = [0; 65];
 		assert_err!(
@@ -644,19 +660,11 @@ fn it_fails_for_factory_handler_mint_with_signer_not_owner() {
 
 		let (secret_key_to, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let to = get_account_id_from_pk(public_key_to.serialize().as_slice());
-		
+		fund_account(to);
+
 		let data = encode_mint(&secp, (secret_key_to, public_key_to), public_key_to, 1, nonce);
-		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
-
-		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			data,
-			Timestamp::now().as_secs(),
-		)));
-
-		// Delay
-		Timestamp::past(COOL_DOWN);
 		assert_err!(
-			Assets::trigger_execution(RuntimeOrigin::signed(1)),
+			Assets::send_transaction_external(TOKEN_ID, &data),
 			Error::<Test>::SignerNotOwner
 		);
 	});
@@ -718,6 +726,7 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
+
 		assert_ok!(Assets::create_token(
 			RuntimeOrigin::signed(1),
 			pk,
@@ -728,17 +737,22 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
 		let to = get_account_id_from_pk(public_key_to.serialize().as_slice());
 		fund_account(to);
-		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 1, nonce);
-		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
+
+		// Mint token
+		let mint_data = encode_mint(&secp, (secret_key, public_key), public_key, 1, nonce);
+		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &mint_data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			data,
+			mint_data,
 			Timestamp::now().as_secs(),
 		)));
 
 		// Delay
 		Timestamp::past(COOL_DOWN);
-		assert_err!(Assets::trigger_execution(RuntimeOrigin::signed(1)), Error::<Test>::BalanceLow);
+		assert_ok!(Assets::trigger_execution(RuntimeOrigin::signed(1)));
+
+		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 10, nonce);
+		assert_err!(Assets::send_transaction_external(TOKEN_ID, &data), Error::<Test>::BalanceLow);
 	});
 }
 

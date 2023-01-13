@@ -174,7 +174,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
 
-	use pallet_omniverse_protocol::{traits::OmniverseAccounts, OmniverseTokenProtocol};
+	use pallet_omniverse_protocol::{traits::OmniverseAccounts, OmniverseTransactionData};
 	use traits::OmniverseTokenFactoryHandler;
 
 	#[pallet::pallet]
@@ -1529,7 +1529,7 @@ pub mod pallet {
 		pub fn send_transaction(
 			origin: OriginFor<T>,
 			token_id: Vec<u8>,
-			data: OmniverseTokenProtocol,
+			data: OmniverseTransactionData,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 

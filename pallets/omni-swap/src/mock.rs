@@ -11,7 +11,7 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 use pallet_assets::{traits::OmniverseTokenFactoryHandler, FactoryResult};
-use pallet_omniverse_protocol::OmniverseTokenProtocol;
+use pallet_omniverse_protocol::OmniverseTransactionData;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -59,7 +59,7 @@ pub struct OmniverseToken();
 impl OmniverseTokenFactoryHandler for OmniverseToken {
 	fn send_transaction_external(
 		_token_id: Vec<u8>,
-		_data: &OmniverseTokenProtocol,
+		_data: &OmniverseTransactionData,
 	) -> Result<FactoryResult, DispatchError> {
 		Ok(FactoryResult::Success)
 	}

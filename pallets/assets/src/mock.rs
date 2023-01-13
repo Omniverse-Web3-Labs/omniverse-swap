@@ -27,7 +27,7 @@ use frame_support::{
 	traits::{ConstU32, ConstU64, GenesisBuild, UnixTime},
 };
 use pallet_omniverse_protocol::{
-	traits::OmniverseAccounts, OmniverseTokenProtocol, VerifyError, VerifyResult,
+	traits::OmniverseAccounts, OmniverseTransactionData, VerifyError, VerifyResult,
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -106,7 +106,7 @@ impl OmniverseProtocol {
 impl OmniverseAccounts for OmniverseProtocol {
 	fn verify_transaction(
 		_token_id: &Vec<u8>,
-		data: &OmniverseTokenProtocol,
+		data: &OmniverseTransactionData,
 	) -> Result<VerifyResult, VerifyError> {
 		if data.signature == [0; 65] {
 			return Err(VerifyError::SignatureError);

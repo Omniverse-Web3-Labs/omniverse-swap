@@ -24,7 +24,7 @@ use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts,
 	types::{
-		MintTokenOp, OmniverseTokenProtocol, TransferTokenOp, VerifyError, VerifyResult, MINT,
+		MintTokenOp, OmniverseTransactionData, TransferTokenOp, VerifyError, VerifyResult, MINT,
 		TRANSFER,
 	},
 };
@@ -876,7 +876,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 	pub(super) fn handle_transaction(
 		omniverse_token: OmniverseToken<T::AccountId>,
-		data: &OmniverseTokenProtocol,
+		data: &OmniverseTransactionData,
 	) -> Result<FactoryResult, DispatchError> {
 		// Check if the tx destination is correct
 		ensure!(
@@ -948,7 +948,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		Ok(FactoryResult::Success)
 	}
 
-	pub(super) fn execute_transaction(data: &OmniverseTokenProtocol) -> Result<(), DispatchError> {
+	pub(super) fn execute_transaction(data: &OmniverseTransactionData) -> Result<(), DispatchError> {
 		let omniverse_token =
 			TokensInfo::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
 
@@ -1025,7 +1025,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 impl<T: Config<I>, I: 'static> OmniverseTokenFactoryHandler for Pallet<T, I> {
 	fn send_transaction_external(
 		token_id: Vec<u8>,
-		data: &OmniverseTokenProtocol,
+		data: &OmniverseTransactionData,
 	) -> Result<FactoryResult, DispatchError> {
 		// Check if the token exists.
 		let token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;

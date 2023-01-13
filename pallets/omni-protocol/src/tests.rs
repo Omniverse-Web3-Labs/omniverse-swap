@@ -1,5 +1,5 @@
 use crate::{
-	mock::*, traits::OmniverseAccounts, OmniverseTokenProtocol, TransferTokenOp, VerifyError,
+	mock::*, traits::OmniverseAccounts, OmniverseTransactionData, TransferTokenOp, VerifyError,
 	VerifyResult, TRANSFER,
 };
 use codec::Encode;
@@ -22,7 +22,7 @@ fn encode_transaction(
 	secp: &Secp256k1<secp256k1::All>,
 	from: (SecretKey, PublicKey),
 	nonce: u128,
-) -> OmniverseTokenProtocol {
+) -> OmniverseTransactionData {
 	let pk: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let transfer_data = TransferTokenOp::new(pk, 0).encode();
 	// let op_data = TokenOpcode::new(TRANSFER, transfer_data).encode();
@@ -35,10 +35,10 @@ fn encode_transaction_with_data(
 	nonce: u128,
 	op_type: u8,
 	op_data: Vec<u8>,
-) -> OmniverseTokenProtocol {
+) -> OmniverseTransactionData {
 	let pk: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let mut tx_data =
-		OmniverseTokenProtocol::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk, op_type, op_data);
+		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk, op_type, op_data);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
