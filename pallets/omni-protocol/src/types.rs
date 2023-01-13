@@ -6,17 +6,17 @@ use sp_std::vec::Vec;
 pub const TRANSFER: u8 = 1_u8;
 pub const MINT: u8 = 3_u8;
 
-#[derive(Decode, Encode, Debug)]
-pub struct TokenOpcode {
-	pub op: u8,
-	pub data: Vec<u8>,
-}
+// #[derive(Decode, Encode, Debug)]
+// pub struct TokenOpcode {
+// 	pub op: u8,
+// 	pub data: Vec<u8>,
+// }
 
-impl TokenOpcode {
-	pub fn new(op: u8, data: Vec<u8>) -> Self {
-		Self { op, data }
-	}
-}
+// impl TokenOpcode {
+// 	pub fn new(op: u8, data: Vec<u8>) -> Self {
+// 		Self { op, data }
+// 	}
+// }
 
 #[derive(Decode, Encode, Debug)]
 pub struct MintTokenOp {
@@ -60,9 +60,10 @@ pub enum VerifyError {
 pub struct OmniverseTokenProtocol {
 	pub nonce: u128,
 	pub chain_id: u32,
-	pub from: [u8; 64],
 	pub initiator_address: Vec<u8>,
-	pub data: Vec<u8>,
+	pub from: [u8; 64],
+	pub op_type: u8,
+	pub op_data: Vec<u8>,
 	pub signature: [u8; 65],
 }
 
@@ -70,11 +71,12 @@ impl OmniverseTokenProtocol {
 	pub fn new(
 		nonce: u128,
 		chain_id: u32,
-		from: [u8; 64],
 		initiator_address: Vec<u8>,
-		data: Vec<u8>,
+		from: [u8; 64],
+		op_type: u8,
+		op_data: Vec<u8>,
 	) -> Self {
-		Self { nonce, chain_id, from, initiator_address, data, signature: [0; 65] }
+		Self { nonce, chain_id, initiator_address, from, op_type, op_data, signature: [0; 65] }
 	}
 
 	pub fn get_raw_hash(&self) -> [u8; 32] {

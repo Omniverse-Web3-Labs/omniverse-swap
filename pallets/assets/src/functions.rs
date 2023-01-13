@@ -24,8 +24,8 @@ use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts,
 	types::{
-		MintTokenOp, OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, VerifyError,
-		VerifyResult, MINT, TRANSFER,
+		MintTokenOp, OmniverseTokenProtocol, TransferTokenOp, VerifyError, VerifyResult, MINT,
+		TRANSFER,
 	},
 };
 use secp256k1::PublicKey;
@@ -889,22 +889,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		// Verify the signature
 		let ret = T::OmniverseProtocol::verify_transaction(&omniverse_token.token_id, &data);
-
-		// Verify balance
-		{
-			let id = TokenId2AssetId::<T, I>::get(&data.initiator_address)
-				.ok_or(Error::<T, I>::Unknown)?;
-			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-			let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
-			// Convert public key to account id
-			let source = Self::to_account(&data.from)?;
-			let dest = Self::to_account(&transfer_data.to)?;
-			let amount = T::Balance::try_from(transfer_data.amount)
-				.unwrap_or(<T as Config<I>>::Balance::default());
-			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
-			let debit = Self::prep_debit(id, &source, amount, f.into())?;
-			Self::prep_credit(id, &dest, amount, debit, f.burn_dust)?;
-		}
+		let source = Self::to_account(&data.from)?;
 
 		match ret {
 			Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
@@ -917,6 +902,40 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			},
 			Err(VerifyError::NonceError) => return Err(Error::<T, I>::ProtocolNonceError.into()),
 			Ok(VerifyResult::Success) => {
+				// Verify balance
+				{
+					let id = TokenId2AssetId::<T, I>::get(&data.initiator_address)
+						.ok_or(Error::<T, I>::Unknown)?;
+					if data.op_type == TRANSFER {
+						// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
+						let transfer_data =
+							TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+						// Convert public key to account id
+						let dest = Self::to_account(&transfer_data.to)?;
+						let amount = T::Balance::try_from(transfer_data.amount)
+							.unwrap_or(<T as Config<I>>::Balance::default());
+						let f = TransferFlags {
+							keep_alive: false,
+							best_effort: false,
+							burn_dust: false,
+						};
+						let debit = Self::prep_debit(id, &source, amount, f.into())?;
+						Self::prep_credit(id, &dest, amount, debit, f.burn_dust)?;
+					} else if data.op_type == MINT {
+						let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+						let dest = Self::to_account(&mint_data.to)?;
+						let amount = T::Balance::try_from(mint_data.amount)
+							.unwrap_or(<T as Config<I>>::Balance::default());
+						if data.from != omniverse_token.owner_pk {
+							return Err(Error::<T, I>::SignerNotOwner.into());
+						}
+						Self::can_increase(id, &dest, amount, true).into_result()?;
+						let details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+						ensure!(source == details.issuer, Error::<T, I>::NoPermission);
+					} else {
+						return Err(Error::<T, I>::UnkonwnProtocolType.into());
+					}
+				}
 				let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
 				DelayedTransactions::<T, I>::insert(
 					delayed_index,
@@ -934,8 +953,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			TokensInfo::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
 
 		// Execute
-		let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-		let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+		// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
+		let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 		// Convert public key to account id
 		let dest = Self::to_account(&transfer_data.to)?;
 		let origin = Self::to_account(&data.from)?;
@@ -944,7 +963,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let id =
 			TokenId2AssetId::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
 
-		if op_data.op == TRANSFER {
+		if data.op_type == TRANSFER {
 			Self::omniverse_transfer(
 				omniverse_token,
 				data.from,
@@ -953,8 +972,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			)?;
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
 			Self::do_transfer(id, &origin, &dest, amount, None, f)?;
-		} else if op_data.op == MINT {
-			let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+		} else if data.op_type == MINT {
+			let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 			if data.from != omniverse_token.owner_pk {
 				return Err(Error::<T, I>::SignerNotOwner.into());
 			}

@@ -22,7 +22,7 @@ pub mod pallet {
 	// use sp_runtime::traits::TrailingZeroInput;
 	use pallet_assets::traits::OmniverseTokenFactoryHandler;
 	use pallet_omniverse_protocol::{
-		OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, TRANSFER,
+		OmniverseTokenProtocol, TransferTokenOp, TRANSFER,
 	};
 	use sp_runtime::traits::IntegerSquareRoot;
 
@@ -257,14 +257,14 @@ pub mod pallet {
 				<TotalLiquidity<T>>::insert(&trading_pair, 0u128);
 			}
 
-			let op_data_x = TokenOpcode::decode(&mut token_x_data.data.as_slice()).unwrap();
-			let op_data_y = TokenOpcode::decode(&mut token_y_data.data.as_slice()).unwrap();
+			// let op_data_x = TokenOpcode::decode(&mut token_x_data.data.as_slice()).unwrap();
+			// let op_data_y = TokenOpcode::decode(&mut token_y_data.data.as_slice()).unwrap();
 			ensure!(
-				op_data_x.op == TRANSFER && op_data_y.op == TRANSFER,
+				token_x_data.op_type == TRANSFER && token_y_data.op_type == TRANSFER,
 				Error::<T>::NotOmniverseTransfer
 			);
-			let transfer_data_x = TransferTokenOp::decode(&mut op_data_x.data.as_slice()).unwrap();
-			let transfer_data_y = TransferTokenOp::decode(&mut op_data_y.data.as_slice()).unwrap();
+			let transfer_data_x = TransferTokenOp::decode(&mut token_x_data.op_data.as_slice()).unwrap();
+			let transfer_data_y = TransferTokenOp::decode(&mut token_y_data.op_data.as_slice()).unwrap();
 			ensure!(
 				transfer_data_x.amount >= amount_x && transfer_data_y.amount >= amount_y,
 				Error::<T>::InsufficientOmniverseTransferAmount
@@ -374,9 +374,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y
-			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-			if op_data.op == TRANSFER {
-				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+			// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
+			if data.op_type == TRANSFER {
+				let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 				let key = (trading_pair.clone(), transfer_data.to);
 				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
 					ensure!(transfer_data.amount <= balance_x, Error::<T>::InsufficientAmount);
@@ -401,9 +401,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y
-			let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-			if op_data.op == TRANSFER {
-				let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+			// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
+			if data.op_type == TRANSFER {
+				let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 				let key = (trading_pair.clone(), transfer_data.to);
 				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
 					ensure!(transfer_data.amount <= balance_y, Error::<T>::InsufficientAmount);

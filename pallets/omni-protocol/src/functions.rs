@@ -1,6 +1,6 @@
 use super::traits::*;
 use super::*;
-use crate::{MintTokenOp, OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, MINT, TRANSFER};
+use crate::{MintTokenOp, OmniverseTokenProtocol, TransferTokenOp, MINT, TRANSFER};
 use codec::Decode;
 use frame_support::traits::{Get, UnixTime};
 use sp_core::Hasher;
@@ -16,15 +16,15 @@ pub fn get_transaction_hash(data: &OmniverseTokenProtocol) -> [u8; 32] {
 	raw.append(&mut data.initiator_address.clone().as_mut());
 
 	let mut bytes_data = Vec::<u8>::new();
-	let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-	bytes_data.extend_from_slice(&mut u8::to_be_bytes(op_data.op).as_slice());
+	// let op_data = TokenOpcode::decode(&mut data.op_data.as_slice()).unwrap();
+	bytes_data.extend_from_slice(&mut u8::to_be_bytes(data.op_type).as_slice());
 
-	if op_data.op == TRANSFER {
-		let transfer_data = TransferTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+	if data.op_type == TRANSFER {
+		let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 		bytes_data.extend_from_slice(&mut transfer_data.to.clone());
 		bytes_data.extend_from_slice(&mut u128::to_be_bytes(transfer_data.amount).as_slice());
-	} else if op_data.op == MINT {
-		let mint_data = MintTokenOp::decode(&mut op_data.data.as_slice()).unwrap();
+	} else if data.op_type == MINT {
+		let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 		bytes_data.extend_from_slice(&mut mint_data.to.clone());
 		bytes_data.extend_from_slice(&mut u128::to_be_bytes(mint_data.amount).as_slice());
 	}

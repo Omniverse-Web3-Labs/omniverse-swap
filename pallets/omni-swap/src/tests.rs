@@ -1,7 +1,7 @@
 use crate::mock::*;
 use codec::Encode;
 use frame_support::assert_ok;
-use pallet_omniverse_protocol::{OmniverseTokenProtocol, TokenOpcode, TransferTokenOp, TRANSFER};
+use pallet_omniverse_protocol::{OmniverseTokenProtocol, TransferTokenOp, TRANSFER};
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
 
@@ -25,9 +25,9 @@ fn encode_transfer(
 ) -> OmniverseTokenProtocol {
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
-	let transfer_data = TransferTokenOp::new(pk_to, amount).encode();
-	let data = TokenOpcode::new(TRANSFER, transfer_data).encode();
-	let mut tx_data = OmniverseTokenProtocol::new(nonce, CHAIN_ID, pk_from, TOKEN_ID, data);
+	let op_data = TransferTokenOp::new(pk_to, amount).encode();
+	// let data = TokenOpcode::new(TRANSFER, transfer_data).encode();
+	let mut tx_data = OmniverseTokenProtocol::new(nonce, CHAIN_ID,  Vec::new(), pk_from, TRANSFER, op_data);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");

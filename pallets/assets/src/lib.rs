@@ -602,6 +602,7 @@ pub mod pallet {
 		TxNotExisted,
 		NotExecutable,
 		DelayedTxNotExisted,
+		UnkonwnProtocolType,
 	}
 
 	#[pallet::call]
