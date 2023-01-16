@@ -22,11 +22,12 @@ fn encode_transaction(
 	secp: &Secp256k1<secp256k1::All>,
 	from: (SecretKey, PublicKey),
 	nonce: u128,
+	amount: u128,
 ) -> OmniverseTransactionData {
 	let pk: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
-	let transfer_data = TransferTokenOp::new(pk, 0).encode();
+	let op_data = TransferTokenOp::new(pk, 0).encode();
 	// let op_data = TokenOpcode::new(TRANSFER, transfer_data).encode();
-	encode_transaction_with_data(secp, from, nonce, TRANSFER, transfer_data)
+	encode_transaction_with_data(secp, from, nonce, TRANSFER, op_data, amount)
 }
 
 fn encode_transaction_with_data(
@@ -35,10 +36,18 @@ fn encode_transaction_with_data(
 	nonce: u128,
 	op_type: u8,
 	op_data: Vec<u8>,
+	amount: u128,
 ) -> OmniverseTransactionData {
 	let pk: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
-	let mut tx_data =
-		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk, op_type, op_data);
+	let mut tx_data = OmniverseTransactionData::new(
+		nonce,
+		CHAIN_ID,
+		INITIATOR_ADDRESS,
+		pk,
+		op_type,
+		op_data,
+		amount,
+	);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
@@ -58,9 +67,10 @@ fn it_fails_for_signature_error() {
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
 		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let amount: u128 = 1;
 
 		// Encode transaction
-		let mut data = encode_transaction(&secp, (secret_key, public_key), nonce);
+		let mut data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
 		// Set a wrong signature
 		data.set_signature([0; 65]);
@@ -82,10 +92,10 @@ fn it_fails_for_signer_not_caller_error() {
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
 		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
-
+		let amount = 1;
 		// Encode transaction
 		let (new_secret_key, _) = secp.generate_keypair(&mut OsRng);
-		let data = encode_transaction(&secp, (new_secret_key, public_key), nonce);
+		let data = encode_transaction(&secp, (new_secret_key, public_key), nonce, amount);
 
 		assert_err!(
 			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
@@ -104,9 +114,9 @@ fn it_fails_for_nonce_error() {
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
 		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new()) + 1;
-
+		let amount = 1;
 		// Encode transaction
-		let data = encode_transaction(&secp, (secret_key, public_key), nonce);
+		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
 		assert_err!(
 			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
@@ -125,9 +135,10 @@ fn it_works_for_verify_transaction() {
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
 		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let amount = 1;
 
 		// Encode transaction
-		let data = encode_transaction(&secp, (secret_key, public_key), nonce);
+		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
 		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data);
 		assert!(ret.is_ok());
@@ -145,19 +156,25 @@ fn it_works_for_malicious_transaction() {
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
 		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let amount = 1;
 
 		// Encode transaction
-		let data = encode_transaction(&secp, (secret_key, public_key), nonce);
+		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
 		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
-
 		// Encode a malicious transaction
-		let op_data = TransferTokenOp::new(pk, 1).encode();
+		let op_data = TransferTokenOp::new(pk, amount).encode();
 		// let op_data = TokenOpcode::new(TRANSFER, transfer_data).encode();
-		let data_new =
-			encode_transaction_with_data(&secp, (secret_key, public_key), nonce, TRANSFER, op_data);
+		let data_new = encode_transaction_with_data(
+			&secp,
+			(secret_key, public_key),
+			nonce,
+			TRANSFER,
+			op_data,
+			amount,
+		);
 
 		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data_new);
 		assert!(ret.is_ok());
@@ -175,9 +192,10 @@ fn it_works_for_duplicated_transaction() {
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
 		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let amount = 1;
 
 		// Encode transaction
-		let data = encode_transaction(&secp, (secret_key, public_key), nonce);
+		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
 		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data);
 		assert!(ret.is_ok());

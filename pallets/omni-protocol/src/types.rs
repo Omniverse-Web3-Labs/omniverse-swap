@@ -64,6 +64,7 @@ pub struct OmniverseTransactionData {
 	pub from: [u8; 64],
 	pub op_type: u8,
 	pub op_data: Vec<u8>,
+	pub amount: u128,
 	pub signature: [u8; 65],
 }
 
@@ -75,8 +76,18 @@ impl OmniverseTransactionData {
 		from: [u8; 64],
 		op_type: u8,
 		op_data: Vec<u8>,
+		amount: u128,
 	) -> Self {
-		Self { nonce, chain_id, initiator_address, from, op_type, op_data, signature: [0; 65] }
+		Self {
+			nonce,
+			chain_id,
+			initiator_address,
+			from,
+			op_type,
+			op_data,
+			amount,
+			signature: [0; 65],
+		}
 	}
 
 	pub fn get_raw_hash(&self) -> [u8; 32] {

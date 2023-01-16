@@ -21,9 +21,7 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	// use sp_runtime::traits::TrailingZeroInput;
 	use pallet_assets::traits::OmniverseTokenFactoryHandler;
-	use pallet_omniverse_protocol::{
-		OmniverseTransactionData, TransferTokenOp, TRANSFER,
-	};
+	use pallet_omniverse_protocol::{OmniverseTransactionData, TransferTokenOp, TRANSFER};
 	use sp_runtime::traits::IntegerSquareRoot;
 
 	#[pallet::pallet]
@@ -263,8 +261,10 @@ pub mod pallet {
 				token_x_data.op_type == TRANSFER && token_y_data.op_type == TRANSFER,
 				Error::<T>::NotOmniverseTransfer
 			);
-			let transfer_data_x = TransferTokenOp::decode(&mut token_x_data.op_data.as_slice()).unwrap();
-			let transfer_data_y = TransferTokenOp::decode(&mut token_y_data.op_data.as_slice()).unwrap();
+			let transfer_data_x =
+				TransferTokenOp::decode(&mut token_x_data.op_data.as_slice()).unwrap();
+			let transfer_data_y =
+				TransferTokenOp::decode(&mut token_y_data.op_data.as_slice()).unwrap();
 			ensure!(
 				transfer_data_x.amount >= amount_x && transfer_data_y.amount >= amount_y,
 				Error::<T>::InsufficientOmniverseTransferAmount

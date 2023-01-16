@@ -27,7 +27,15 @@ fn encode_transfer(
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
 	let op_data = TransferTokenOp::new(pk_to, amount).encode();
 	// let data = TokenOpcode::new(TRANSFER, transfer_data).encode();
-	let mut tx_data = OmniverseTransactionData::new(nonce, CHAIN_ID,  Vec::new(), pk_from, TRANSFER, op_data);
+	let mut tx_data = OmniverseTransactionData::new(
+		nonce,
+		CHAIN_ID,
+		Vec::new(),
+		pk_from,
+		TRANSFER,
+		op_data,
+		amount,
+	);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");

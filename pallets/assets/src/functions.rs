@@ -948,7 +948,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		Ok(FactoryResult::Success)
 	}
 
-	pub(super) fn execute_transaction(data: &OmniverseTransactionData) -> Result<(), DispatchError> {
+	pub(super) fn execute_transaction(
+		data: &OmniverseTransactionData,
+	) -> Result<(), DispatchError> {
 		let omniverse_token =
 			TokensInfo::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
 

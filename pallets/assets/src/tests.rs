@@ -28,7 +28,8 @@ use frame_support::{
 use pallet_balances::Error as BalancesError;
 use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
-	traits::OmniverseAccounts, MintTokenOp, OmniverseTransactionData, TransferTokenOp, MINT, TRANSFER,
+	traits::OmniverseAccounts, MintTokenOp, OmniverseTransactionData, TransferTokenOp, MINT,
+	TRANSFER,
 };
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
@@ -432,8 +433,15 @@ fn encode_transfer(
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
 	let op_data = TransferTokenOp::new(pk_to, amount).encode();
-	let mut tx_data =
-		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, TRANSFER, op_data);
+	let mut tx_data = OmniverseTransactionData::new(
+		nonce,
+		CHAIN_ID,
+		INITIATOR_ADDRESS,
+		pk_from,
+		TRANSFER,
+		op_data,
+		amount,
+	);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
@@ -453,8 +461,15 @@ fn encode_mint(
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
 	let op_data = MintTokenOp::new(pk_to, amount).encode();
-	let mut tx_data =
-		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, MINT, op_data);
+	let mut tx_data = OmniverseTransactionData::new(
+		nonce,
+		CHAIN_ID,
+		INITIATOR_ADDRESS,
+		pk_from,
+		MINT,
+		op_data,
+		amount,
+	);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
