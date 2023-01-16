@@ -23,10 +23,7 @@ use codec::Decode;
 use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts,
-	types::{
-		MintTokenOp, OmniverseTransactionData, TransferTokenOp, VerifyError, VerifyResult, MINT,
-		TRANSFER,
-	},
+	types::{OmniverseTransactionData, VerifyError, VerifyResult, MINT, TRANSFER},
 };
 use secp256k1::PublicKey;
 use sp_core::Hasher;
@@ -906,13 +903,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				{
 					let id = TokenId2AssetId::<T, I>::get(&data.initiator_address)
 						.ok_or(Error::<T, I>::Unknown)?;
+					let dest_pk: [u8; 64] = data
+						.op_data
+						.clone()
+						.try_into()
+						.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 					if data.op_type == TRANSFER {
 						// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-						let transfer_data =
-							TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 						// Convert public key to account id
-						let dest = Self::to_account(&transfer_data.to)?;
-						let amount = T::Balance::try_from(transfer_data.amount)
+						let dest = Self::to_account(&dest_pk)?;
+						let amount = T::Balance::try_from(data.amount)
 							.unwrap_or(<T as Config<I>>::Balance::default());
 						let f = TransferFlags {
 							keep_alive: false,
@@ -922,9 +922,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						let debit = Self::prep_debit(id, &source, amount, f.into())?;
 						Self::prep_credit(id, &dest, amount, debit, f.burn_dust)?;
 					} else if data.op_type == MINT {
-						let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-						let dest = Self::to_account(&mint_data.to)?;
-						let amount = T::Balance::try_from(mint_data.amount)
+						// let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+						let dest = Self::to_account(&dest_pk)?;
+						let amount = T::Balance::try_from(data.amount)
 							.unwrap_or(<T as Config<I>>::Balance::default());
 						if data.from != omniverse_token.owner_pk {
 							return Err(Error::<T, I>::SignerNotOwner.into());
@@ -956,30 +956,30 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		// Execute
 		// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-		let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+		// let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+		let dest_pk: [u8; 64] = data
+			.op_data
+			.clone()
+			.try_into()
+			.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 		// Convert public key to account id
-		let dest = Self::to_account(&transfer_data.to)?;
+		let dest = Self::to_account(&dest_pk)?;
 		let origin = Self::to_account(&data.from)?;
-		let amount = T::Balance::try_from(transfer_data.amount)
-			.unwrap_or(<T as Config<I>>::Balance::default());
+		let amount =
+			T::Balance::try_from(data.amount).unwrap_or(<T as Config<I>>::Balance::default());
 		let id =
 			TokenId2AssetId::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
 
 		if data.op_type == TRANSFER {
-			Self::omniverse_transfer(
-				omniverse_token,
-				data.from,
-				transfer_data.to,
-				transfer_data.amount,
-			)?;
+			Self::omniverse_transfer(omniverse_token, data.from, dest_pk, data.amount)?;
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
 			Self::do_transfer(id, &origin, &dest, amount, None, f)?;
 		} else if data.op_type == MINT {
-			let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+			// let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 			if data.from != omniverse_token.owner_pk {
 				return Err(Error::<T, I>::SignerNotOwner.into());
 			}
-			Self::omniverse_mint(omniverse_token, mint_data.to, mint_data.amount);
+			Self::omniverse_mint(omniverse_token, dest_pk, data.amount);
 			Self::do_mint(id, &dest, amount, Some(origin))?;
 		}
 

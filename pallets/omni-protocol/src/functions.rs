@@ -1,7 +1,6 @@
 use super::traits::*;
 use super::*;
-use crate::{MintTokenOp, OmniverseTransactionData, TransferTokenOp, MINT, TRANSFER};
-use codec::Decode;
+use crate::OmniverseTransactionData;
 use frame_support::traits::{Get, UnixTime};
 use sp_core::Hasher;
 use sp_io::crypto;
@@ -19,15 +18,17 @@ pub fn get_transaction_hash(data: &OmniverseTransactionData) -> [u8; 32] {
 	// let op_data = TokenOpcode::decode(&mut data.op_data.as_slice()).unwrap();
 	bytes_data.extend_from_slice(&mut u8::to_be_bytes(data.op_type).as_slice());
 
-	if data.op_type == TRANSFER {
-		let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-		bytes_data.extend_from_slice(&mut transfer_data.to.clone());
-		bytes_data.extend_from_slice(&mut u128::to_be_bytes(transfer_data.amount).as_slice());
-	} else if data.op_type == MINT {
-		let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-		bytes_data.extend_from_slice(&mut mint_data.to.clone());
-		bytes_data.extend_from_slice(&mut u128::to_be_bytes(mint_data.amount).as_slice());
-	}
+	// if data.op_type == TRANSFER {
+	// 	// let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+	// 	bytes_data.extend(data.op_data.clone());
+	// 	bytes_data.extend_from_slice(&mut u128::to_be_bytes(data.amount).as_slice());
+	// } else if data.op_type == MINT {
+	// 	let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+	// 	bytes_data.extend_from_slice(&mut mint_data.to.clone());
+	// 	bytes_data.extend_from_slice(&mut u128::to_be_bytes(mint_data.amount).as_slice());
+	// }
+	bytes_data.extend(data.op_data.clone());
+	bytes_data.extend_from_slice(&mut u128::to_be_bytes(data.amount).as_slice());
 	raw.append(&mut bytes_data.as_mut());
 
 	let h = Keccak256::hash(raw.as_slice());

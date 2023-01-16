@@ -20,7 +20,7 @@
 use super::traits::OmniverseTokenFactoryHandler;
 use super::*;
 use crate::{mock::*, Error};
-use codec::{Decode, Encode};
+use codec::Decode;
 use frame_support::{
 	assert_err, assert_noop, assert_ok,
 	traits::{Currency, UnixTime},
@@ -28,8 +28,7 @@ use frame_support::{
 use pallet_balances::Error as BalancesError;
 use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
-	traits::OmniverseAccounts, MintTokenOp, OmniverseTransactionData, TransferTokenOp, MINT,
-	TRANSFER,
+	traits::OmniverseAccounts, OmniverseTransactionData, MINT, TRANSFER,
 };
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
@@ -432,7 +431,7 @@ fn encode_transfer(
 ) -> OmniverseTransactionData {
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
-	let op_data = TransferTokenOp::new(pk_to, amount).encode();
+	let op_data = pk_to.to_vec();
 	let mut tx_data = OmniverseTransactionData::new(
 		nonce,
 		CHAIN_ID,
@@ -460,7 +459,7 @@ fn encode_mint(
 ) -> OmniverseTransactionData {
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
-	let op_data = MintTokenOp::new(pk_to, amount).encode();
+	let op_data = pk_to.to_vec();
 	let mut tx_data = OmniverseTransactionData::new(
 		nonce,
 		CHAIN_ID,
@@ -479,23 +478,23 @@ fn encode_mint(
 	tx_data
 }
 
-#[test]
-fn it_works_for_decode() {
-	new_test_ext().execute_with(|| {
-		let data = [
-			65, 1, 123, 189, 136, 115, 207, 195, 13, 61, 222, 226, 167, 169, 220, 210, 181, 179,
-			153, 184, 93, 171, 135, 192, 17, 173, 75, 233, 111, 230, 150, 37, 67, 14, 63, 19, 148,
-			114, 7, 255, 78, 89, 91, 67, 238, 127, 43, 205, 103, 208, 179, 37, 39, 55, 40, 111,
-			234, 152, 103, 135, 234, 57, 187, 219, 106, 181, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0,
-		];
+// #[test]
+// fn it_works_for_decode() {
+// 	new_test_ext().execute_with(|| {
+// 		let data = [
+// 			65, 1, 123, 189, 136, 115, 207, 195, 13, 61, 222, 226, 167, 169, 220, 210, 181, 179,
+// 			153, 184, 93, 171, 135, 192, 17, 173, 75, 233, 111, 230, 150, 37, 67, 14, 63, 19, 148,
+// 			114, 7, 255, 78, 89, 91, 67, 238, 127, 43, 205, 103, 208, 179, 37, 39, 55, 40, 111,
+// 			234, 152, 103, 135, 234, 57, 187, 219, 106, 181, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+// 			0, 0, 0, 0,
+// 		];
 
-		// let token_op = TokenOpcode::decode(&mut data.as_slice()).unwrap();
-		// println!("{:?}", token_op);
-		let mint_op = MintTokenOp::decode(&mut data.as_slice());
-		println!("{:?}", mint_op);
-	});
-}
+// 		// let token_op = TokenOpcode::decode(&mut data.as_slice()).unwrap();
+// 		// println!("{:?}", token_op);
+// 		let mint_op = MintTokenOp::decode(&mut data.as_slice());
+// 		println!("{:?}", mint_op);
+// 	});
+// }
 
 #[test]
 fn it_works_for_create_token() {
