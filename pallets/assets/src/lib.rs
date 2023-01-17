@@ -1559,7 +1559,7 @@ pub mod pallet {
 
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
-			Self::execute_transaction(&omni_tx.tx_data)?;
+			Self::execute_transaction(&omni_tx.token_id, &omni_tx.tx_data)?;
 
 			Ok(())
 		}

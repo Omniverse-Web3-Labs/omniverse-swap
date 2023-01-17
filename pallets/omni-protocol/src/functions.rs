@@ -55,7 +55,7 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		// Check nonce
 		if nonce == data.nonce {
 			// Add to transaction recorder
-			let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
+			let omni_tx = OmniverseTx::new(token_id, data.clone(), T::Timestamp::now().as_secs());
 			TransactionRecorder::<T>::insert(&data.from, &nonce, omni_tx);
 			TransactionCount::<T>::insert(&data.from, token_id, nonce + 1);
 			if data.chain_id == T::ChainId::get() {
@@ -67,7 +67,8 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 			let his_tx = TransactionRecorder::<T>::get(&data.from, &data.nonce).unwrap();
 			let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data);
 			if his_tx_hash != tx_hash_bytes {
-				let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
+				let omni_tx =
+					OmniverseTx::new(token_id, data.clone(), T::Timestamp::now().as_secs());
 				let evil_tx = EvilTxData::new(omni_tx, nonce);
 				let mut er =
 					EvilRecorder::<T>::get(&data.from).unwrap_or(Vec::<EvilTxData>::default());

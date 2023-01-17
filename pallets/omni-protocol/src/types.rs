@@ -101,13 +101,14 @@ impl OmniverseTransactionData {
 
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 pub struct OmniverseTx {
+	pub token_id: Vec<u8>,
 	pub tx_data: OmniverseTransactionData,
 	pub timestamp: u64,
 }
 
 impl OmniverseTx {
-	pub fn new(data: OmniverseTransactionData, timestamp: u64) -> Self {
-		Self { tx_data: data, timestamp }
+	pub fn new(token_id: &Vec<u8>, data: OmniverseTransactionData, timestamp: u64) -> Self {
+		Self { token_id: token_id.clone(), tx_data: data, timestamp }
 	}
 }
 

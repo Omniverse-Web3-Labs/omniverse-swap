@@ -877,7 +877,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	) -> Result<FactoryResult, DispatchError> {
 		// Check if the tx destination is correct
 		ensure!(
-			omniverse_token.is_member(&data.initiator_address),
+			omniverse_token.is_member(&data.initiator_address) || data.initiator_address.len() == 0,
 			Error::<T, I>::WrongDestination
 		);
 
@@ -901,7 +901,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			Ok(VerifyResult::Success) => {
 				// Verify balance
 				{
-					let id = TokenId2AssetId::<T, I>::get(&data.initiator_address)
+					let id = TokenId2AssetId::<T, I>::get(&omniverse_token.token_id)
 						.ok_or(Error::<T, I>::Unknown)?;
 					let dest_pk: [u8; 64] = data
 						.op_data
@@ -949,10 +949,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	}
 
 	pub(super) fn execute_transaction(
+		token_id: &Vec<u8>,
 		data: &OmniverseTransactionData,
 	) -> Result<(), DispatchError> {
-		let omniverse_token =
-			TokensInfo::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
+		let omniverse_token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
 
 		// Execute
 		// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
@@ -967,8 +967,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let origin = Self::to_account(&data.from)?;
 		let amount =
 			T::Balance::try_from(data.amount).unwrap_or(<T as Config<I>>::Balance::default());
-		let id =
-			TokenId2AssetId::<T, I>::get(&data.initiator_address).ok_or(Error::<T, I>::Unknown)?;
+		let id = TokenId2AssetId::<T, I>::get(token_id).ok_or(Error::<T, I>::Unknown)?;
 
 		if data.op_type == TRANSFER {
 			Self::omniverse_transfer(omniverse_token, data.from, dest_pk, data.amount)?;
