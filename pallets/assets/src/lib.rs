@@ -1547,9 +1547,12 @@ pub mod pallet {
 
 			let delayed_tx = DelayedTransactions::<T, I>::get(delayed_executing_index)
 				.ok_or(Error::<T, I>::DelayedTxNotExisted)?;
-			let omni_tx =
-				T::OmniverseProtocol::get_transaction_data(delayed_tx.sender, delayed_tx.nonce)
-					.ok_or(Error::<T, I>::TxNotExisted)?;
+			let omni_tx = T::OmniverseProtocol::get_transaction_data(
+				delayed_tx.sender,
+				delayed_tx.token_id.clone(),
+				delayed_tx.nonce,
+			)
+			.ok_or(Error::<T, I>::TxNotExisted)?;
 
 			let cur_st = T::Timestamp::now().as_secs();
 			ensure!(
@@ -1559,7 +1562,7 @@ pub mod pallet {
 
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
-			Self::execute_transaction(&omni_tx.token_id, &omni_tx.tx_data)?;
+			Self::execute_transaction(&delayed_tx.token_id, &omni_tx.tx_data)?;
 
 			Ok(())
 		}

@@ -939,7 +939,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
 				DelayedTransactions::<T, I>::insert(
 					delayed_index,
-					DelayedTx::new(data.from, data.nonce),
+					DelayedTx::new(data.from, omniverse_token.token_id, data.nonce),
 				);
 				DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
 			},
