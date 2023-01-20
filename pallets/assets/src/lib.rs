@@ -1475,23 +1475,22 @@ pub mod pallet {
 			token_id: Vec<u8>,
 			members: Option<Vec<Vec<u8>>>,
 		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 
 			// Check if the token exists
 			ensure!(!TokensInfo::<T, I>::contains_key(&token_id), Error::<T, I>::InUse);
 
+			// Convert public key to account id
+			let owner = Self::to_account(&owner_pk)?;
+
 			// Update storage.
 			TokensInfo::<T, I>::insert(
 				&token_id,
-				OmniverseToken::new(sender.clone(), owner_pk, token_id.clone(), members),
+				OmniverseToken::new(owner.clone(), owner_pk, token_id.clone(), members),
 			);
 
 			// Integrate assets
-			// Convert public key to account id
-			let account = Self::to_account(&owner_pk)?;
-
-			let owner = account.clone();
-			let admin = account.clone();
+			let admin = owner.clone();
 
 			// Change assets
 			let deposit = T::AssetDeposit::get();
