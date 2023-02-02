@@ -127,7 +127,11 @@ impl OmniverseAccounts for OmniverseProtocol {
 		1
 	}
 
-	fn get_transaction_data(_pk: [u8; 64], _nonce: u128) -> Option<OmniverseTx> {
+	fn get_transaction_data(
+		_pk: [u8; 64],
+		_token_id: Vec<u8>,
+		_nonce: u128,
+	) -> Option<OmniverseTx> {
 		unsafe { TRANSACTION_DATA.clone() }
 	}
 

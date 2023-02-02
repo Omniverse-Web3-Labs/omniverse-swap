@@ -620,7 +620,6 @@ fn it_fails_for_factory_handler_with_signature_error() {
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &mint_data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			&TOKEN_ID,
 			mint_data,
 			Timestamp::now().as_secs(),
 		)));
@@ -699,7 +698,6 @@ fn it_works_for_factory_handler_mint() {
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			&TOKEN_ID,
 			data,
 			Timestamp::now().as_secs(),
 		)));
@@ -745,7 +743,6 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &mint_data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			&TOKEN_ID,
 			mint_data,
 			Timestamp::now().as_secs(),
 		)));
@@ -785,7 +782,6 @@ fn it_works_for_factory_handler_transfer() {
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &mint_data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			&TOKEN_ID,
 			mint_data,
 			Timestamp::now().as_secs(),
 		)));
@@ -801,7 +797,6 @@ fn it_works_for_factory_handler_transfer() {
 		assert_ok!(Assets::send_transaction_external(TOKEN_ID, &data));
 
 		OmniverseProtocol::set_transaction_data(Some(OmniverseTx::new(
-			&TOKEN_ID,
 			data,
 			Timestamp::now().as_secs(),
 		)));

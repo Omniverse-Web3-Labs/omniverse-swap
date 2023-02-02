@@ -56,20 +56,20 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		// Check nonce
 		if nonce == data.nonce {
 			// Add to transaction recorder
-			let omni_tx = OmniverseTx::new(token_id, data.clone(), T::Timestamp::now().as_secs());
-			TransactionRecorder::<T>::insert(&data.from, &nonce, omni_tx);
+			let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
+			TransactionRecorder::<T>::insert(&data.from, &(token_id.clone(), nonce), omni_tx);
 			TransactionCount::<T>::insert(&data.from, token_id, nonce + 1);
 			if data.chain_id == T::ChainId::get() {
-				Self::deposit_event(Event::TransactionSent(data.from, nonce));
+				Self::deposit_event(Event::TransactionSent(data.from, token_id.clone(), nonce));
 			}
 			Ok(VerifyResult::Success)
 		} else if nonce > data.nonce {
 			// Check conflicts
-			let his_tx = TransactionRecorder::<T>::get(&data.from, &data.nonce).unwrap();
+			let his_tx =
+				TransactionRecorder::<T>::get(&data.from, &(token_id.clone(), data.nonce)).unwrap();
 			let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data);
 			if his_tx_hash != tx_hash_bytes {
-				let omni_tx =
-					OmniverseTx::new(token_id, data.clone(), T::Timestamp::now().as_secs());
+				let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
 				let evil_tx = EvilTxData::new(omni_tx, nonce);
 				let mut er =
 					EvilRecorder::<T>::get(&data.from).unwrap_or(Vec::<EvilTxData>::default());
@@ -103,8 +103,8 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		T::ChainId::get()
 	}
 
-	fn get_transaction_data(pk: [u8; 64], nonce: u128) -> Option<OmniverseTx> {
-		TransactionRecorder::<T>::get(pk, nonce)
+	fn get_transaction_data(pk: [u8; 64], token_id: Vec<u8>, nonce: u128) -> Option<OmniverseTx> {
+		TransactionRecorder::<T>::get(pk, &(token_id, nonce))
 	}
 
 	fn get_cooling_down_time() -> u64 {

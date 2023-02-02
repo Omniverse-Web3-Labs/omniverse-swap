@@ -48,8 +48,14 @@ pub mod pallet {
 	#[pallet::getter(fn transaction_recorder)]
 	// Learn more about declaring storage items:
 	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type TransactionRecorder<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, [u8; 64], Blake2_128Concat, u128, OmniverseTx>;
+	pub type TransactionRecorder<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		[u8; 64],
+		Blake2_128Concat,
+		(Vec<u8>, u128),
+		OmniverseTx,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn transaction_count)]
@@ -81,7 +87,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		TransactionSent([u8; 64], u128),
+		TransactionSent([u8; 64], Vec<u8>, u128),
 	}
 
 	// Errors inform users that something went wrong.
