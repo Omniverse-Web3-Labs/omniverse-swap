@@ -1,6 +1,7 @@
 use super::traits::*;
 use super::*;
-use crate::OmniverseTransactionData;
+use crate::{Fungible, OmniverseTransactionData};
+use codec::Decode;
 use frame_support::traits::{Get, UnixTime};
 use sp_core::Hasher;
 use sp_io::crypto;
@@ -11,12 +12,12 @@ pub fn get_transaction_hash(data: &OmniverseTransactionData) -> [u8; 32] {
 	let mut raw = Vec::<u8>::new();
 	raw.extend_from_slice(&mut u128::to_be_bytes(data.nonce).as_slice());
 	raw.extend_from_slice(&mut u32::to_be_bytes(data.chain_id).as_slice());
-	raw.extend_from_slice(&mut data.from.clone());
 	raw.append(&mut data.initiator_address.clone().as_mut());
+	raw.extend_from_slice(&mut data.from.clone());
 
 	let mut bytes_data = Vec::<u8>::new();
-	// let op_data = TokenOpcode::decode(&mut data.op_data.as_slice()).unwrap();
-	bytes_data.extend_from_slice(&mut u8::to_be_bytes(data.op_type).as_slice());
+	let fungible = Fungible::decode(&mut data.payload.as_slice()).unwrap();
+	bytes_data.extend_from_slice(&mut u8::to_be_bytes(fungible.op).as_slice());
 
 	// if data.op_type == TRANSFER {
 	// 	// let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
@@ -27,8 +28,8 @@ pub fn get_transaction_hash(data: &OmniverseTransactionData) -> [u8; 32] {
 	// 	bytes_data.extend_from_slice(&mut mint_data.to.clone());
 	// 	bytes_data.extend_from_slice(&mut u128::to_be_bytes(mint_data.amount).as_slice());
 	// }
-	bytes_data.extend(data.op_data.clone());
-	bytes_data.extend_from_slice(&mut u128::to_be_bytes(data.amount).as_slice());
+	bytes_data.extend(fungible.ex_data.clone());
+	bytes_data.extend_from_slice(&mut u128::to_be_bytes(fungible.amount).as_slice());
 	raw.append(&mut bytes_data.as_mut());
 
 	let h = Keccak256::hash(raw.as_slice());

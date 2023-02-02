@@ -19,6 +19,26 @@ pub const MINT: u8 = 3_u8;
 // }
 
 #[derive(Decode, Encode, Debug)]
+pub struct Fungible {
+	pub op: u8,
+	pub ex_data: Vec<u8>,
+	pub amount: u128,
+}
+
+impl Fungible {
+	pub fn new(op: u8, ex_data: Vec<u8>, amount: u128) -> Self {
+		Self { op, ex_data, amount }
+	}
+}
+
+#[derive(Decode, Encode, Debug)]
+pub struct NonFungible {
+	pub op: u8,
+	pub ex_data: Vec<u8>,
+	pub token_id: u128,
+}
+
+#[derive(Decode, Encode, Debug)]
 pub struct MintTokenOp {
 	pub to: [u8; 64],
 	pub amount: u128,
@@ -62,9 +82,7 @@ pub struct OmniverseTransactionData {
 	pub chain_id: u32,
 	pub initiator_address: Vec<u8>,
 	pub from: [u8; 64],
-	pub op_type: u8,
-	pub op_data: Vec<u8>,
-	pub amount: u128,
+	pub payload: Vec<u8>,
 	pub signature: [u8; 65],
 }
 
@@ -74,20 +92,9 @@ impl OmniverseTransactionData {
 		chain_id: u32,
 		initiator_address: Vec<u8>,
 		from: [u8; 64],
-		op_type: u8,
-		op_data: Vec<u8>,
-		amount: u128,
+		payload: Vec<u8>,
 	) -> Self {
-		Self {
-			nonce,
-			chain_id,
-			initiator_address,
-			from,
-			op_type,
-			op_data,
-			amount,
-			signature: [0; 65],
-		}
+		Self { nonce, chain_id, initiator_address, from, payload, signature: [0; 65] }
 	}
 
 	pub fn get_raw_hash(&self) -> [u8; 32] {

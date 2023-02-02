@@ -20,7 +20,7 @@
 use super::traits::OmniverseTokenFactoryHandler;
 use super::*;
 use crate::{mock::*, Error};
-use codec::Decode;
+use codec::{Decode, Encode};
 use frame_support::{
 	assert_err, assert_noop, assert_ok,
 	traits::{Currency, UnixTime},
@@ -28,7 +28,7 @@ use frame_support::{
 use pallet_balances::Error as BalancesError;
 use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
-	traits::OmniverseAccounts, OmniverseTransactionData, MINT, TRANSFER,
+	traits::OmniverseAccounts, Fungible, OmniverseTransactionData, MINT, TRANSFER,
 };
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
@@ -431,16 +431,9 @@ fn encode_transfer(
 ) -> OmniverseTransactionData {
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
-	let op_data = pk_to.to_vec();
-	let mut tx_data = OmniverseTransactionData::new(
-		nonce,
-		CHAIN_ID,
-		INITIATOR_ADDRESS,
-		pk_from,
-		TRANSFER,
-		op_data,
-		amount,
-	);
+	let payload = Fungible::new(TRANSFER, pk_to.into(), amount).encode();
+	let mut tx_data =
+		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, payload);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
@@ -459,16 +452,9 @@ fn encode_mint(
 ) -> OmniverseTransactionData {
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
-	let op_data = pk_to.to_vec();
-	let mut tx_data = OmniverseTransactionData::new(
-		nonce,
-		CHAIN_ID,
-		INITIATOR_ADDRESS,
-		pk_from,
-		MINT,
-		op_data,
-		amount,
-	);
+	let payload = Fungible::new(MINT, pk_to.into(), amount).encode();
+	let mut tx_data =
+		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, payload);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");

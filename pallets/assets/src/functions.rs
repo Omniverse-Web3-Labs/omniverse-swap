@@ -23,7 +23,7 @@ use codec::Decode;
 use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts,
-	types::{OmniverseTransactionData, VerifyError, VerifyResult, MINT, TRANSFER},
+	types::{Fungible, OmniverseTransactionData, VerifyError, VerifyResult, MINT, TRANSFER},
 };
 use secp256k1::PublicKey;
 use sp_core::Hasher;
@@ -903,16 +903,22 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				{
 					let id = TokenId2AssetId::<T, I>::get(&omniverse_token.token_id)
 						.ok_or(Error::<T, I>::Unknown)?;
-					let dest_pk: [u8; 64] = data
-						.op_data
-						.clone()
+					let fungible = Fungible::decode(&mut data.payload.as_slice())
+						.map_err(|_| Error::<T, I>::DecodePayloadFailed)?;
+					let dest_pk: [u8; 64] = fungible
+						.ex_data
 						.try_into()
 						.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
-					if data.op_type == TRANSFER {
+					// let dest_pk: [u8; 64] = data
+					// 	.op_data
+					// 	.clone()
+					// 	.try_into()
+					// 	.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+					if fungible.op == TRANSFER {
 						// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
 						// Convert public key to account id
 						let dest = Self::to_account(&dest_pk)?;
-						let amount = T::Balance::try_from(data.amount)
+						let amount = T::Balance::try_from(fungible.amount)
 							.unwrap_or(<T as Config<I>>::Balance::default());
 						let f = TransferFlags {
 							keep_alive: false,
@@ -921,10 +927,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						};
 						let debit = Self::prep_debit(id, &source, amount, f.into())?;
 						Self::prep_credit(id, &dest, amount, debit, f.burn_dust)?;
-					} else if data.op_type == MINT {
+					} else if fungible.op == MINT {
 						// let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 						let dest = Self::to_account(&dest_pk)?;
-						let amount = T::Balance::try_from(data.amount)
+						let amount = T::Balance::try_from(fungible.amount)
 							.unwrap_or(<T as Config<I>>::Balance::default());
 						if data.from != omniverse_token.owner_pk {
 							return Err(Error::<T, I>::SignerNotOwner.into());
@@ -957,28 +963,34 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// Execute
 		// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
 		// let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-		let dest_pk: [u8; 64] = data
-			.op_data
-			.clone()
+		let fungible = Fungible::decode(&mut data.payload.as_slice())
+			.map_err(|_| Error::<T, I>::DecodePayloadFailed)?;
+		let dest_pk: [u8; 64] = fungible
+			.ex_data
 			.try_into()
 			.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+		// let dest_pk: [u8; 64] = data
+		// 	.op_data
+		// 	.clone()
+		// 	.try_into()
+		// 	.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 		// Convert public key to account id
 		let dest = Self::to_account(&dest_pk)?;
 		let origin = Self::to_account(&data.from)?;
 		let amount =
-			T::Balance::try_from(data.amount).unwrap_or(<T as Config<I>>::Balance::default());
+			T::Balance::try_from(fungible.amount).unwrap_or(<T as Config<I>>::Balance::default());
 		let id = TokenId2AssetId::<T, I>::get(token_id).ok_or(Error::<T, I>::Unknown)?;
 
-		if data.op_type == TRANSFER {
-			Self::omniverse_transfer(omniverse_token, data.from, dest_pk, data.amount)?;
+		if fungible.op == TRANSFER {
+			Self::omniverse_transfer(omniverse_token, data.from, dest_pk, fungible.amount)?;
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
 			Self::do_transfer(id, &origin, &dest, amount, None, f)?;
-		} else if data.op_type == MINT {
+		} else if fungible.op == MINT {
 			// let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 			if data.from != omniverse_token.owner_pk {
 				return Err(Error::<T, I>::SignerNotOwner.into());
 			}
-			Self::omniverse_mint(omniverse_token, dest_pk, data.amount);
+			Self::omniverse_mint(omniverse_token, dest_pk, fungible.amount);
 			Self::do_mint(id, &dest, amount, Some(origin))?;
 		}
 

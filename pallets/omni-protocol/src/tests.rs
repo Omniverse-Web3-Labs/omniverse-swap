@@ -1,6 +1,6 @@
 use crate::{
-	mock::*, traits::OmniverseAccounts, OmniverseTransactionData, TransferTokenOp, VerifyError,
-	VerifyResult, TRANSFER,
+	mock::*, traits::OmniverseAccounts, Fungible, OmniverseTransactionData, VerifyError,
+	VerifyResult, MINT, TRANSFER,
 };
 use codec::Encode;
 use frame_support::assert_err;
@@ -25,29 +25,20 @@ fn encode_transaction(
 	amount: u128,
 ) -> OmniverseTransactionData {
 	let pk: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
-	let op_data = TransferTokenOp::new(pk, 0).encode();
+	let payload = Fungible::new(TRANSFER, pk.into(), amount).encode();
 	// let op_data = TokenOpcode::new(TRANSFER, transfer_data).encode();
-	encode_transaction_with_data(secp, from, nonce, TRANSFER, op_data, amount)
+	encode_transaction_with_data(secp, from, nonce, payload)
 }
 
 fn encode_transaction_with_data(
 	secp: &Secp256k1<secp256k1::All>,
 	from: (SecretKey, PublicKey),
 	nonce: u128,
-	op_type: u8,
-	op_data: Vec<u8>,
-	amount: u128,
+	payload: Vec<u8>,
 ) -> OmniverseTransactionData {
 	let pk: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
-	let mut tx_data = OmniverseTransactionData::new(
-		nonce,
-		CHAIN_ID,
-		INITIATOR_ADDRESS,
-		pk,
-		op_type,
-		op_data,
-		amount,
-	);
+	let mut tx_data =
+		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk, payload);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
@@ -165,16 +156,11 @@ fn it_works_for_malicious_transaction() {
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 		// Encode a malicious transaction
-		let op_data = TransferTokenOp::new(pk, amount).encode();
+		// let op_data = TransferTokenOp::new(pk, amount).encode();
+		let payload = Fungible::new(MINT, pk.into(), amount).encode();
 		// let op_data = TokenOpcode::new(TRANSFER, transfer_data).encode();
-		let data_new = encode_transaction_with_data(
-			&secp,
-			(secret_key, public_key),
-			nonce,
-			TRANSFER,
-			op_data,
-			amount,
-		);
+		let data_new =
+			encode_transaction_with_data(&secp, (secret_key, public_key), nonce, payload);
 
 		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data_new);
 		assert!(ret.is_ok());
