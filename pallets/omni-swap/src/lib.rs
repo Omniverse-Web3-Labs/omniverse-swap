@@ -21,7 +21,7 @@ pub mod pallet {
 	use sp_std::vec::Vec;
 	// use sp_runtime::traits::TrailingZeroInput;
 	use pallet_assets::traits::OmniverseTokenFactoryHandler;
-	use pallet_omniverse_protocol::{OmniverseTransactionData, TransferTokenOp, TRANSFER};
+	use pallet_omniverse_protocol::{Fungible, OmniverseTransactionData, TRANSFER};
 	use sp_runtime::traits::IntegerSquareRoot;
 
 	#[pallet::pallet]
@@ -79,6 +79,8 @@ pub mod pallet {
 		/// Error names should be descriptive.
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
+		DecodePayloadFailed,
+		SerializePublicKeyFailed,
 		StorageOverflow,
 		InvalidValue,
 		TradingPairNotExist,
@@ -257,29 +259,33 @@ pub mod pallet {
 
 			// let op_data_x = TokenOpcode::decode(&mut token_x_data.data.as_slice()).unwrap();
 			// let op_data_y = TokenOpcode::decode(&mut token_y_data.data.as_slice()).unwrap();
+			let fungible_x = Fungible::decode(&mut token_x_data.payload.as_slice())
+				.map_err(|_| Error::<T>::DecodePayloadFailed)?;
+			let fungible_y = Fungible::decode(&mut token_y_data.payload.as_slice())
+				.map_err(|_| Error::<T>::DecodePayloadFailed)?;
 			ensure!(
-				token_x_data.op_type == TRANSFER && token_y_data.op_type == TRANSFER,
+				fungible_x.op == TRANSFER && fungible_y.op == TRANSFER,
 				Error::<T>::NotOmniverseTransfer
 			);
-			let transfer_data_x =
-				TransferTokenOp::decode(&mut token_x_data.op_data.as_slice()).unwrap();
-			let transfer_data_y =
-				TransferTokenOp::decode(&mut token_y_data.op_data.as_slice()).unwrap();
+			// let transfer_data_x =
+			// 	TransferTokenOp::decode(&mut token_x_data.op_data.as_slice()).unwrap();
+			// let transfer_data_y =
+			// 	TransferTokenOp::decode(&mut token_y_data.op_data.as_slice()).unwrap();
 			ensure!(
-				transfer_data_x.amount >= amount_x && transfer_data_y.amount >= amount_y,
+				fungible_x.amount >= amount_x && fungible_y.amount >= amount_y,
 				Error::<T>::InsufficientOmniverseTransferAmount
 			);
 			let key = (trading_pair.clone(), token_x_data.from);
 
 			// The redundant token transferred needs to be returned to the user.
 			if let Some((mut balance_x, mut balance_y)) = Balance::<T>::get(&key) {
-				balance_x = balance_x + transfer_data_x.amount - amount_x;
-				balance_y = balance_y + transfer_data_y.amount - amount_y;
+				balance_x = balance_x + fungible_x.amount - amount_x;
+				balance_y = balance_y + fungible_y.amount - amount_y;
 				<Balance<T>>::insert(&key, (balance_x, balance_y));
 			} else {
 				<Balance<T>>::insert(
 					&key,
-					(transfer_data_x.amount - amount_x, transfer_data_y.amount - amount_y),
+					(fungible_x.amount - amount_x, fungible_y.amount - amount_y),
 				);
 			}
 
@@ -375,11 +381,17 @@ pub mod pallet {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y
 			// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-			if data.op_type == TRANSFER {
-				let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-				let key = (trading_pair.clone(), transfer_data.to);
+			let fungible = Fungible::decode(&mut data.payload.as_slice())
+				.map_err(|_| Error::<T>::DecodePayloadFailed)?;
+			if fungible.op == TRANSFER {
+				// let transfer_data = TransferTokenOp::decode(&mut fungible.op_data.as_slice()).unwrap();
+				let dest_pk: [u8; 64] = fungible
+					.ex_data
+					.try_into()
+					.map_err(|_| Error::<T>::SerializePublicKeyFailed)?;
+				let key = (trading_pair.clone(), dest_pk);
 				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
-					ensure!(transfer_data.amount <= balance_x, Error::<T>::InsufficientAmount);
+					ensure!(fungible.amount <= balance_x, Error::<T>::InsufficientAmount);
 					let (token_x_id, _) =
 						TokenId::<T>::get(&trading_pair).ok_or(Error::<T>::TokenIdNotExist)?;
 					// TODO
@@ -387,7 +399,7 @@ pub mod pallet {
 					T::OmniverseToken::send_transaction_external(token_x_id, &data)
 						.ok()
 						.ok_or(Error::<T>::OmniverseTransferXFailed)?;
-					<Balance<T>>::insert(&key, (balance_x - transfer_data.amount, balance_y));
+					<Balance<T>>::insert(&key, (balance_x - fungible.amount, balance_y));
 				}
 			}
 			Ok(())
@@ -402,11 +414,17 @@ pub mod pallet {
 			ensure_signed(origin)?;
 			// TODO `to` need equal to `transfer_data.to` and token id equal balance_y
 			// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-			if data.op_type == TRANSFER {
-				let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-				let key = (trading_pair.clone(), transfer_data.to);
+			let fungible = Fungible::decode(&mut data.payload.as_slice())
+				.map_err(|_| Error::<T>::DecodePayloadFailed)?;
+			if fungible.op == TRANSFER {
+				// let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
+				let dest_pk: [u8; 64] = fungible
+					.ex_data
+					.try_into()
+					.map_err(|_| Error::<T>::SerializePublicKeyFailed)?;
+				let key = (trading_pair.clone(), dest_pk);
 				if let Some((balance_x, balance_y)) = Balance::<T>::get(&key) {
-					ensure!(transfer_data.amount <= balance_y, Error::<T>::InsufficientAmount);
+					ensure!(fungible.amount <= balance_y, Error::<T>::InsufficientAmount);
 					let (_, token_y_id) =
 						TokenId::<T>::get(&trading_pair).ok_or(Error::<T>::TokenIdNotExist)?;
 					// TODO
@@ -414,7 +432,7 @@ pub mod pallet {
 					T::OmniverseToken::send_transaction_external(token_y_id, &data)
 						.ok()
 						.ok_or(Error::<T>::OmniverseTransferYFailed)?;
-					<Balance<T>>::insert(&key, (balance_x, balance_y - transfer_data.amount));
+					<Balance<T>>::insert(&key, (balance_x, balance_y - fungible.amount));
 				}
 			}
 			Ok(())
