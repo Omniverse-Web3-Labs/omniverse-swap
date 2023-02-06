@@ -877,7 +877,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	) -> Result<FactoryResult, DispatchError> {
 		// Check if the tx destination is correct
 		ensure!(
-			omniverse_token.is_member(&data.initiator_address) || data.initiator_address.len() == 0,
+			omniverse_token.is_member(&(data.chain_id, data.initiator_address.clone()))
+				|| data.initiator_address.len() == 0,
 			Error::<T, I>::WrongDestination
 		);
 

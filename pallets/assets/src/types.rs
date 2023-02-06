@@ -280,12 +280,18 @@ where
 	}
 }
 
+// #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
+// pub struct Member {
+// 	pub chain_id: u32,
+// 	pub contract_addr: Vec<u8>,
+// }
+
 #[derive(Clone, PartialEq, Eq, Debug, Encode, Decode, TypeInfo)]
 pub struct OmniverseToken<AccountId> {
 	pub owner: AccountId,
 	pub owner_pk: [u8; 64],
 	pub token_id: Vec<u8>,
-	pub members: Vec<Vec<u8>>,
+	pub members: Vec<(u32, Vec<u8>)>,
 }
 
 impl<AccountId> OmniverseToken<AccountId> {
@@ -293,20 +299,16 @@ impl<AccountId> OmniverseToken<AccountId> {
 		owner: AccountId,
 		owner_pk: [u8; 64],
 		token_id: Vec<u8>,
-		members: Option<Vec<Vec<u8>>>,
+		members: Option<Vec<(u32, Vec<u8>)>>,
 	) -> Self {
-		Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<Vec<u8>>::new()) }
+		Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<(u32, Vec<u8>)>::new()) }
 	}
 
-	pub fn add_members(&mut self, members: Vec<Vec<u8>>) {
-		for m in members {
-			if !self.members.contains(&m) {
-				self.members.push(m)
-			}
-		}
+	pub fn add_members(&mut self, members: Vec<(u32, Vec<u8>)>) {
+		self.members = members;
 	}
 
-	pub fn is_member(&self, member: &Vec<u8>) -> bool {
+	pub fn is_member(&self, member: &(u32, Vec<u8>)) -> bool {
 		for m in self.members.clone() {
 			if *member == m {
 				return true;

@@ -546,7 +546,7 @@ pub mod pallet {
 		},
 		MembersSet {
 			token_id: Vec<u8>,
-			members: Vec<Vec<u8>>,
+			members: Vec<(u32, Vec<u8>)>,
 		},
 	}
 
@@ -1474,7 +1474,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			owner_pk: [u8; 64],
 			token_id: Vec<u8>,
-			members: Option<Vec<Vec<u8>>>,
+			members: Option<Vec<(u32, Vec<u8>)>>,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 
@@ -1571,7 +1571,7 @@ pub mod pallet {
 		pub fn set_members(
 			origin: OriginFor<T>,
 			token_id: Vec<u8>,
-			members: Vec<Vec<u8>>,
+			members: Vec<(u32, Vec<u8>)>,
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
