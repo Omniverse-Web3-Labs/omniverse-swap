@@ -3,8 +3,9 @@ use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
-pub const TRANSFER: u8 = 1_u8;
-pub const MINT: u8 = 3_u8;
+pub const TRANSFER: u8 = 0_u8;
+pub const MINT: u8 = 1_u8;
+pub const BURN: u8 = 2_u8;
 
 // #[derive(Decode, Encode, Debug)]
 // pub struct TokenOpcode {

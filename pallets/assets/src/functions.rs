@@ -23,7 +23,7 @@ use codec::Decode;
 use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts,
-	types::{Fungible, OmniverseTransactionData, VerifyError, VerifyResult, MINT, TRANSFER},
+	types::{Fungible, OmniverseTransactionData, VerifyError, VerifyResult, MINT, BURN, TRANSFER},
 };
 use secp256k1::PublicKey;
 use sp_core::Hasher;
@@ -915,12 +915,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					// 	.clone()
 					// 	.try_into()
 					// 	.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+					let dest = Self::to_account(&dest_pk)?;
+					let amount = T::Balance::try_from(fungible.amount)
+						.unwrap_or(<T as Config<I>>::Balance::default());
 					if fungible.op == TRANSFER {
 						// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
 						// Convert public key to account id
-						let dest = Self::to_account(&dest_pk)?;
-						let amount = T::Balance::try_from(fungible.amount)
-							.unwrap_or(<T as Config<I>>::Balance::default());
+						// let dest = Self::to_account(&dest_pk)?;
+						// let amount = T::Balance::try_from(fungible.amount)
+						// 	.unwrap_or(<T as Config<I>>::Balance::default());
 						let f = TransferFlags {
 							keep_alive: false,
 							best_effort: false,
@@ -930,15 +933,23 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						Self::prep_credit(id, &dest, amount, debit, f.burn_dust)?;
 					} else if fungible.op == MINT {
 						// let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-						let dest = Self::to_account(&dest_pk)?;
-						let amount = T::Balance::try_from(fungible.amount)
-							.unwrap_or(<T as Config<I>>::Balance::default());
+						// let dest = Self::to_account(&dest_pk)?;
+						// let amount = T::Balance::try_from(fungible.amount)
+						// 	.unwrap_or(<T as Config<I>>::Balance::default());
 						if data.from != omniverse_token.owner_pk {
 							return Err(Error::<T, I>::SignerNotOwner.into());
 						}
 						Self::can_increase(id, &dest, amount, true).into_result()?;
 						let details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
 						ensure!(source == details.issuer, Error::<T, I>::NoPermission);
+					} else if fungible.op == BURN {
+						let f = DebitFlags { keep_alive: false, best_effort: true };
+						let actual = Self::prep_debit(id, &source, amount, f)?;
+						let details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+						ensure!(source == details.issuer, Error::<T, I>::NoPermission);
+						// Account::<T, I>::get(&id, source).
+						Account::<T, I>::get(&id, source).ok_or(Error::<T, I>::NoAccount)?;
+						debug_assert!(details.supply >= actual, "checked in prep; qed");
 					} else {
 						return Err(Error::<T, I>::UnkonwnProtocolType.into());
 					}
@@ -976,13 +987,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// 	.try_into()
 		// 	.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 		// Convert public key to account id
-		let dest = Self::to_account(&dest_pk)?;
 		let origin = Self::to_account(&data.from)?;
 		let amount =
 			T::Balance::try_from(fungible.amount).unwrap_or(<T as Config<I>>::Balance::default());
 		let id = TokenId2AssetId::<T, I>::get(token_id).ok_or(Error::<T, I>::Unknown)?;
 
 		if fungible.op == TRANSFER {
+			let dest = Self::to_account(&dest_pk)?;
 			Self::omniverse_transfer(omniverse_token, data.from, dest_pk, fungible.amount)?;
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
 			Self::do_transfer(id, &origin, &dest, amount, None, f)?;
@@ -991,8 +1002,17 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			if data.from != omniverse_token.owner_pk {
 				return Err(Error::<T, I>::SignerNotOwner.into());
 			}
+			let dest = Self::to_account(&dest_pk)?;
 			Self::omniverse_mint(omniverse_token, dest_pk, fungible.amount);
 			Self::do_mint(id, &dest, amount, Some(origin))?;
+		} else if fungible.op == BURN {
+			if data.from != omniverse_token.owner_pk {
+				return Err(Error::<T, I>::SignerNotOwner.into());
+			}			
+			let f = DebitFlags { keep_alive: false, best_effort: true };
+			// let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
+			let _ = Self::do_burn(id, &origin, amount, None, f)?;
+			Self::omniverse_burn(omniverse_token, data.from,  fungible.amount);
 		}
 
 		Ok(())
@@ -1022,6 +1042,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	) {
 		let balance = Tokens::<T, I>::get(&omniverse_token.token_id, &to);
 		Tokens::<T, I>::insert(&omniverse_token.token_id, &to, balance + amount);
+	}
+
+	pub(super) fn omniverse_burn(
+		omniverse_token: OmniverseToken<T::AccountId>,
+		account: [u8; 64],
+		amount: u128,
+	) {
+		let balance = Tokens::<T, I>::get(&omniverse_token.token_id, &account);
+		Tokens::<T, I>::insert(&omniverse_token.token_id, &account, balance - amount);
 	}
 
 	pub(super) fn to_account(public_key: &[u8; 64]) -> Result<T::AccountId, Error<T, I>> {
