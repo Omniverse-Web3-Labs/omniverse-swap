@@ -878,7 +878,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// Check if the tx destination is correct
 		ensure!(
 			omniverse_token.is_member(&(data.chain_id, data.initiator_address.clone()))
-				|| data.initiator_address.len() == 0,
+				|| data.initiator_address == omniverse_token.token_id,
 			Error::<T, I>::WrongDestination
 		);
 

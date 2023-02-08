@@ -454,7 +454,7 @@ fn encode_mint(
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
 	let payload = Fungible::new(MINT, pk_to.into(), amount).encode();
 	let mut tx_data =
-		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, payload);
+		OmniverseTransactionData::new(nonce, CHAIN_ID, TOKEN_ID, pk_from, payload);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
