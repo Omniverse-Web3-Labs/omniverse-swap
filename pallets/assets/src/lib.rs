@@ -548,6 +548,16 @@ pub mod pallet {
 			token_id: Vec<u8>,
 			members: Vec<(u32, Vec<u8>)>,
 		},
+		TransactionSent {
+			pk: [u8; 64],
+			token_id: Vec<u8>,
+			nonce: u128,
+		},
+
+		TransactionExecuted {
+			pk: [u8; 64],
+			nonce: u128,
+		},
 	}
 
 	#[pallet::error]
@@ -1563,6 +1573,7 @@ pub mod pallet {
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
 			Self::execute_transaction(&delayed_tx.token_id, &omni_tx.tx_data)?;
+			Self::deposit_event(Event::TransactionExecuted{pk: delayed_tx.sender, nonce: delayed_tx.nonce});
 
 			Ok(())
 		}

@@ -85,10 +85,7 @@ pub mod pallet {
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events-and-errors
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		TransactionSent([u8; 64], Vec<u8>, u128),
-	}
+	pub enum Event<T: Config> {}
 
 	// Errors inform users that something went wrong.
 	#[pallet::error]
