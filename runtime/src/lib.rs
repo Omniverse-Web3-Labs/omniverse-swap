@@ -29,7 +29,7 @@ use sp_version::RuntimeVersion;
 pub use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{
-		ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem, Randomness, StorageInfo,
+		AsEnsureOriginWithArg, ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem, Randomness, StorageInfo,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -75,6 +75,10 @@ pub type Hash = sp_core::H256;
 pub const UNITS: Balance = 1_000_000_000_000;
 
 pub type AssetId = u32;
+
+pub type CollectionId = u32;
+
+pub type ItemId = u128;
 
 pub type AssetsForceOrigin = frame_system::EnsureRoot<AccountId>;
 
@@ -270,11 +274,18 @@ parameter_types! {
 	pub const AssetDeposit: Balance = 10 * UNITS; // 10 UNITS deposit to create fungible asset class
 	pub const AssetAccountDeposit: Balance = UNITS;
 	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
-	pub const AssetsStringLimit: u32 = 50;
+	pub const StringLimit: u32 = 50;
 	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
 	// https://github.com/paritytech/substrate/blob/069917b/frame/assets/src/lib.rs#L257L271
 	pub const MetadataDepositBase: Balance = UNITS;
 	pub const MetadataDepositPerByte: Balance = UNITS;
+
+	pub const CollectionDeposit: Balance = 100 * UNITS;
+	pub const ItemDeposit: Balance = 1 * UNITS;
+	pub const AttributeDepositBase: Balance = UNITS;
+	pub const KeyLimit: u32 = 32;
+	pub const ValueLimit: u32 = 256;
+
 }
 
 /// We allow root and the Relay Chain council to execute privileged asset operations.
@@ -293,11 +304,35 @@ impl pallet_assets::Config for Runtime {
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type ApprovalDeposit = ApprovalDeposit;
-	type StringLimit = AssetsStringLimit;
+	type StringLimit = StringLimit;
 	type Freezer = ();
 	type Extra = ();
 	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 	type AssetAccountDeposit = AssetAccountDeposit;
+}
+
+impl pallet_uniques::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type OmniverseProtocol = OmniverseProtocol;
+	type Timestamp = Timestamp;
+	type CollectionId = CollectionId;
+	type ItemId = ItemId;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+	type ItemDeposit = ItemDeposit;
+	type Locker = ();
+	type CollectionDeposit = CollectionDeposit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type AttributeDepositBase = AttributeDepositBase;
+	type DepositPerByte = MetadataDepositPerByte;
+	type StringLimit = StringLimit;
+	type KeyLimit = KeyLimit;
+	type ValueLimit = ValueLimit;
+
+	#[cfg(feature = "runtime-benchmarks")]
+	type Helper = ();
+	type WeightInfo = pallet_uniques::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -361,6 +396,7 @@ construct_runtime!(
 		OmniverseProtocol: pallet_omniverse_protocol,
 		OmniverseSwap: pallet_omniverse_swap,
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+		Uniques: pallet_uniques,
 	}
 );
 

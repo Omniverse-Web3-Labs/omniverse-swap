@@ -54,6 +54,7 @@ pallet-omniverse-protocol = { version = "4.0.0-dev", default-features = false, p
 # pallet-omniverse-factory = { version = "4.0.0-dev", default-features = false, path = "../pallets/omni-factory" }
 pallet-omniverse-swap = { version = "4.0.0-dev", default-features = false, path = "../pallets/omni-swap" }
 pallet-assets = { version = "4.0.0-dev", default-features = false, path = "../pallets/assets" }
+pallet-uniques = { version = "4.0.0-dev", default-features = false, path = "../pallets/uniques" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "5.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.31" }
