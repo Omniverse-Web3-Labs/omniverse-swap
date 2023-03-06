@@ -381,7 +381,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		ensure!(!T::OmniverseProtocol::is_malicious(data.from), Error::<T, I>::UserIsMalicious);
 
 		// Verify the signature
-		let ret = T::OmniverseProtocol::verify_transaction(&omniverse_token.token_id, &data);
+		let ret = T::OmniverseProtocol::verify_transaction(
+			&PALLET_NAME.to_vec(),
+			&omniverse_token.token_id,
+			&data,
+		);
 		let source = Self::to_account(&data.from)?;
 
 		match ret {

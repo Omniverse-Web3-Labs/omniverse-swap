@@ -23,7 +23,7 @@ use codec::Decode;
 use frame_support::{traits::Get, BoundedVec};
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts,
-	types::{Fungible, OmniverseTransactionData, VerifyError, VerifyResult, MINT, BURN, TRANSFER},
+	types::{Fungible, OmniverseTransactionData, VerifyError, VerifyResult, BURN, MINT, TRANSFER},
 };
 use secp256k1::PublicKey;
 use sp_core::Hasher;
@@ -886,7 +886,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		ensure!(!T::OmniverseProtocol::is_malicious(data.from), Error::<T, I>::UserIsMalicious);
 
 		// Verify the signature
-		let ret = T::OmniverseProtocol::verify_transaction(&omniverse_token.token_id, &data);
+		let ret = T::OmniverseProtocol::verify_transaction(
+			&PALLET_NAME.to_vec(),
+			&omniverse_token.token_id,
+			&data,
+		);
 		let source = Self::to_account(&data.from)?;
 
 		match ret {
@@ -960,7 +964,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					DelayedTx::new(data.from, omniverse_token.token_id.clone(), data.nonce),
 				);
 				DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
-				Self::deposit_event(Event::TransactionSent{pk: data.from, token_id: omniverse_token.token_id, nonce: data.nonce});
+				Self::deposit_event(Event::TransactionSent {
+					pk: data.from,
+					token_id: omniverse_token.token_id,
+					nonce: data.nonce,
+				});
 			},
 		}
 
@@ -1009,11 +1017,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		} else if fungible.op == BURN {
 			if data.from != omniverse_token.owner_pk {
 				return Err(Error::<T, I>::SignerNotOwner.into());
-			}			
+			}
 			let f = DebitFlags { keep_alive: false, best_effort: true };
 			// let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
 			let _ = Self::do_burn(id, &origin, amount, None, f)?;
-			Self::omniverse_burn(omniverse_token, data.from,  fungible.amount);
+			Self::omniverse_burn(omniverse_token, data.from, fungible.amount);
 		}
 
 		Ok(())

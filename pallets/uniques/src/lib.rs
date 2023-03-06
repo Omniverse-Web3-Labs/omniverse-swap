@@ -51,7 +51,8 @@ use frame_support::{
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{
-		tokens::Locker, BalanceStatus::Reserved, Currency, EnsureOriginWithArg, ReservableCurrency, UnixTime
+		tokens::Locker, BalanceStatus::Reserved, Currency, EnsureOriginWithArg, ReservableCurrency,
+		UnixTime,
 	},
 	transactional,
 };
@@ -66,6 +67,7 @@ pub use types::*;
 pub use weights::WeightInfo;
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+pub static PALLET_NAME: [u8; 7] = [0x75, 0x6e, 0x69, 0x71, 0x75, 0x65, 0x73];
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -74,7 +76,6 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, BoundedVec};
 	use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec;
-
 
 	use pallet_omniverse_protocol::{traits::OmniverseAccounts, OmniverseTransactionData};
 
@@ -114,13 +115,13 @@ pub mod pallet {
 
 		/// The type used to identify a unique item within a collection.
 		type ItemId: Member
-		+ Parameter
-		+ AtLeast32BitUnsigned
-		+ Default
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ MaxEncodedLen
-		+ TypeInfo;
+			+ Parameter
+			+ AtLeast32BitUnsigned
+			+ Default
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ MaxEncodedLen
+			+ TypeInfo;
 
 		/// The currency mechanism, used for paying for reserves.
 		type Currency: ReservableCurrency<Self::AccountId>;
@@ -307,14 +308,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn tokens)]
-	pub type Tokens<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		Vec<u8>,
-		Blake2_128Concat,
-		[u8; 64],
-		Vec<u128>
-	>;
+	pub type Tokens<T: Config<I>, I: 'static = ()> =
+		StorageDoubleMap<_, Blake2_128Concat, Vec<u8>, Blake2_128Concat, [u8; 64], Vec<u128>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn delayed_transctions)]
@@ -345,13 +340,26 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
 		/// A `collection` was created.
-		Created { collection: T::CollectionId, creator: T::AccountId, owner: T::AccountId },
+		Created {
+			collection: T::CollectionId,
+			creator: T::AccountId,
+			owner: T::AccountId,
+		},
 		/// A `collection` was force-created.
-		ForceCreated { collection: T::CollectionId, owner: T::AccountId },
+		ForceCreated {
+			collection: T::CollectionId,
+			owner: T::AccountId,
+		},
 		/// A `collection` was destroyed.
-		Destroyed { collection: T::CollectionId },
+		Destroyed {
+			collection: T::CollectionId,
+		},
 		/// An `item` was issued.
-		Issued { collection: T::CollectionId, item: T::ItemId, owner: T::AccountId },
+		Issued {
+			collection: T::CollectionId,
+			item: T::ItemId,
+			owner: T::AccountId,
+		},
 		/// An `item` was transferred.
 		Transferred {
 			collection: T::CollectionId,
@@ -360,17 +368,34 @@ pub mod pallet {
 			to: T::AccountId,
 		},
 		/// An `item` was destroyed.
-		Burned { collection: T::CollectionId, item: T::ItemId, owner: T::AccountId },
+		Burned {
+			collection: T::CollectionId,
+			item: T::ItemId,
+			owner: T::AccountId,
+		},
 		/// Some `item` was frozen.
-		Frozen { collection: T::CollectionId, item: T::ItemId },
+		Frozen {
+			collection: T::CollectionId,
+			item: T::ItemId,
+		},
 		/// Some `item` was thawed.
-		Thawed { collection: T::CollectionId, item: T::ItemId },
+		Thawed {
+			collection: T::CollectionId,
+			item: T::ItemId,
+		},
 		/// Some `collection` was frozen.
-		CollectionFrozen { collection: T::CollectionId },
+		CollectionFrozen {
+			collection: T::CollectionId,
+		},
 		/// Some `collection` was thawed.
-		CollectionThawed { collection: T::CollectionId },
+		CollectionThawed {
+			collection: T::CollectionId,
+		},
 		/// The owner changed.
-		OwnerChanged { collection: T::CollectionId, new_owner: T::AccountId },
+		OwnerChanged {
+			collection: T::CollectionId,
+			new_owner: T::AccountId,
+		},
 		/// The management team changed.
 		TeamChanged {
 			collection: T::CollectionId,
@@ -395,7 +420,9 @@ pub mod pallet {
 			delegate: T::AccountId,
 		},
 		/// A `collection` has had its attributes changed by the `Force` origin.
-		ItemStatusChanged { collection: T::CollectionId },
+		ItemStatusChanged {
+			collection: T::CollectionId,
+		},
 		/// New metadata has been set for a `collection`.
 		CollectionMetadataSet {
 			collection: T::CollectionId,
@@ -403,7 +430,9 @@ pub mod pallet {
 			is_frozen: bool,
 		},
 		/// Metadata has been cleared for a `collection`.
-		CollectionMetadataCleared { collection: T::CollectionId },
+		CollectionMetadataCleared {
+			collection: T::CollectionId,
+		},
 		/// New metadata has been set for an item.
 		MetadataSet {
 			collection: T::CollectionId,
@@ -412,9 +441,15 @@ pub mod pallet {
 			is_frozen: bool,
 		},
 		/// Metadata has been cleared for an item.
-		MetadataCleared { collection: T::CollectionId, item: T::ItemId },
+		MetadataCleared {
+			collection: T::CollectionId,
+			item: T::ItemId,
+		},
 		/// Metadata has been cleared for an item.
-		Redeposited { collection: T::CollectionId, successful_items: Vec<T::ItemId> },
+		Redeposited {
+			collection: T::CollectionId,
+			successful_items: Vec<T::ItemId>,
+		},
 		/// New attribute metadata has been set for a `collection` or `item`.
 		AttributeSet {
 			collection: T::CollectionId,
@@ -429,9 +464,15 @@ pub mod pallet {
 			key: BoundedVec<u8, T::KeyLimit>,
 		},
 		/// Ownership acceptance has changed for an account.
-		OwnershipAcceptanceChanged { who: T::AccountId, maybe_collection: Option<T::CollectionId> },
+		OwnershipAcceptanceChanged {
+			who: T::AccountId,
+			maybe_collection: Option<T::CollectionId>,
+		},
 		/// Max supply has been set for a collection.
-		CollectionMaxSupplySet { collection: T::CollectionId, max_supply: u32 },
+		CollectionMaxSupplySet {
+			collection: T::CollectionId,
+			max_supply: u32,
+		},
 		/// The price was set for the instance.
 		ItemPriceSet {
 			collection: T::CollectionId,
@@ -440,7 +481,10 @@ pub mod pallet {
 			whitelisted_buyer: Option<T::AccountId>,
 		},
 		/// The price for the instance was removed.
-		ItemPriceRemoved { collection: T::CollectionId, item: T::ItemId },
+		ItemPriceRemoved {
+			collection: T::CollectionId,
+			item: T::ItemId,
+		},
 		/// An item was bought.
 		ItemBought {
 			collection: T::CollectionId,
@@ -502,7 +546,7 @@ pub mod pallet {
 		NotForSale,
 		/// The provided bid is too low.
 		BidTooLow,
-		
+
 		Unsupport,
 
 		DoTransferFailed,
@@ -596,13 +640,12 @@ pub mod pallet {
 			token_id: Vec<u8>,
 			members: Option<Vec<(u32, Vec<u8>)>>,
 		) -> DispatchResult {
-
 			ensure_signed(origin)?;
 			ensure!(!TokensInfo::<T, I>::contains_key(&token_id), Error::<T, I>::InUse);
 
 			// Convert public key to account id
 			let owner = Self::to_account(&owner_pk)?;
-						// Update storage.
+			// Update storage.
 			TokensInfo::<T, I>::insert(
 				&token_id,
 				OmniverseToken::new(owner.clone(), owner_pk, token_id.clone(), members),
@@ -848,10 +891,10 @@ pub mod pallet {
 					if T::Currency::reserve(&collection_details.owner, deposit - old).is_err() {
 						// NOTE: No alterations made to collection_details in this iteration so far,
 						// so this is OK to do.
-						continue
+						continue;
 					}
 				} else {
-					continue
+					continue;
 				}
 				collection_details.total_deposit.saturating_accrue(deposit);
 				collection_details.total_deposit.saturating_reduce(old);
@@ -1012,7 +1055,7 @@ pub mod pallet {
 				let details = maybe_details.as_mut().ok_or(Error::<T, I>::UnknownCollection)?;
 				ensure!(origin == details.owner, Error::<T, I>::NoPermission);
 				if details.owner == owner {
-					return Ok(())
+					return Ok(());
 				}
 
 				// Move the deposit to the new owner.
@@ -1682,11 +1725,11 @@ pub mod pallet {
 
 			let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
 			ensure!(delayed_executing_index < delayed_index, Error::<T, I>::NoDelayedTx);
-
 			let delayed_tx = DelayedTransactions::<T, I>::get(delayed_executing_index)
 				.ok_or(Error::<T, I>::DelayedTxNotExisted)?;
 			let omni_tx = T::OmniverseProtocol::get_transaction_data(
 				delayed_tx.sender,
+				PALLET_NAME.to_vec(),
 				delayed_tx.token_id.clone(),
 				delayed_tx.nonce,
 			)
@@ -1701,7 +1744,10 @@ pub mod pallet {
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
 			Self::execute_transaction(&delayed_tx.token_id, &omni_tx.tx_data)?;
-			Self::deposit_event(Event::TransactionExecuted{pk: delayed_tx.sender, nonce: delayed_tx.nonce});
+			Self::deposit_event(Event::TransactionExecuted {
+				pk: delayed_tx.sender,
+				nonce: delayed_tx.nonce,
+			});
 
 			Ok(())
 		}

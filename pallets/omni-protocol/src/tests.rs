@@ -9,6 +9,7 @@ use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, Secr
 
 const CHAIN_ID: u32 = 1;
 const INITIATOR_ADDRESS: Vec<u8> = Vec::<u8>::new();
+const PALLET_NAME: Vec<u8> = Vec::<u8>::new();
 
 fn get_sig_slice(sig: &RecoverableSignature) -> [u8; 65] {
 	let (recovery_id, sig_slice) = sig.serialize_compact();
@@ -57,7 +58,7 @@ fn it_fails_for_signature_error() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME, Vec::new());
 		let amount: u128 = 1;
 
 		// Encode transaction
@@ -67,7 +68,7 @@ fn it_fails_for_signature_error() {
 		data.set_signature([0; 65]);
 
 		assert_err!(
-			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
+			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data),
 			VerifyError::SignatureError
 		);
 	});
@@ -82,14 +83,14 @@ fn it_fails_for_signer_not_caller_error() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME, Vec::new());
 		let amount = 1;
 		// Encode transaction
 		let (new_secret_key, _) = secp.generate_keypair(&mut OsRng);
 		let data = encode_transaction(&secp, (new_secret_key, public_key), nonce, amount);
 
 		assert_err!(
-			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
+			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data),
 			VerifyError::SignerNotCaller
 		);
 	});
@@ -104,13 +105,13 @@ fn it_fails_for_nonce_error() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new()) + 1;
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME, Vec::new()) + 1;
 		let amount = 1;
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
 		assert_err!(
-			OmniverseProtocol::verify_transaction(&Vec::new(), &data),
+			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data),
 			VerifyError::NonceError
 		);
 	});
@@ -125,13 +126,13 @@ fn it_works_for_verify_transaction() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME, Vec::new());
 		let amount = 1;
 
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
-		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME , &Vec::new(), &data);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 	});
@@ -146,13 +147,13 @@ fn it_works_for_malicious_transaction() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME, Vec::new());
 		let amount = 1;
 
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
-		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 		// Encode a malicious transaction
@@ -162,7 +163,7 @@ fn it_works_for_malicious_transaction() {
 		let data_new =
 			encode_transaction_with_data(&secp, (secret_key, public_key), nonce, payload);
 
-		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data_new);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data_new);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Malicious);
 	});
@@ -177,17 +178,17 @@ fn it_works_for_duplicated_transaction() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME, Vec::new());
 		let amount = 1;
 
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
-		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 
-		let ret = OmniverseProtocol::verify_transaction(&Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Duplicated);
 	});

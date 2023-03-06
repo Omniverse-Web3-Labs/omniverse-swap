@@ -453,8 +453,7 @@ fn encode_mint(
 	let pk_from: [u8; 64] = from.1.serialize_uncompressed()[1..].try_into().expect("");
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
 	let payload = Fungible::new(MINT, pk_to.into(), amount).encode();
-	let mut tx_data =
-		OmniverseTransactionData::new(nonce, CHAIN_ID, TOKEN_ID, pk_from, payload);
+	let mut tx_data = OmniverseTransactionData::new(nonce, CHAIN_ID, TOKEN_ID, pk_from, payload);
 	let h = tx_data.get_raw_hash();
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
@@ -558,7 +557,7 @@ fn it_fails_for_factory_handler_with_token_not_exist() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key, 1, nonce);
 		assert_err!(Assets::send_transaction_external(vec![1], &data), Error::<Test>::Unknown);
@@ -599,7 +598,7 @@ fn it_fails_for_factory_handler_with_signature_error() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
@@ -646,7 +645,7 @@ fn it_fails_for_factory_handler_mint_with_signer_not_owner() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
@@ -679,7 +678,7 @@ fn it_works_for_factory_handler_mint() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
@@ -721,7 +720,7 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
@@ -765,7 +764,7 @@ fn it_works_for_factory_handler_transfer() {
 
 		// Get nonce
 		let pk: [u8; 64] = public_key.serialize_uncompressed()[1..].try_into().expect("");
-		let nonce = OmniverseProtocol::get_transaction_count(pk, Vec::new());
+		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		// Create token
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
