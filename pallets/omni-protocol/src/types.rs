@@ -33,6 +33,19 @@ impl Fungible {
 }
 
 #[derive(Decode, Encode, Debug)]
+pub struct Assets {
+	pub op: u8,
+	pub ex_data: Vec<u8>,
+	pub quantity: u128,
+}
+
+impl Assets {
+	pub fn new(op: u8, ex_data: Vec<u8>, quantity: u128) -> Self {
+		Self { op, ex_data, quantity }
+	}
+}
+
+#[derive(Decode, Encode, Debug)]
 pub struct NonFungible {
 	pub op: u8,
 	pub ex_data: Vec<u8>,

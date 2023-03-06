@@ -165,6 +165,7 @@ pub use pallet::*;
 pub use weights::WeightInfo;
 
 type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+pub static PALLET_NAME: [u8; 6] = [0x61, 0x73, 0x73, 0x65, 0x74, 0x73];
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -1559,6 +1560,7 @@ pub mod pallet {
 				.ok_or(Error::<T, I>::DelayedTxNotExisted)?;
 			let omni_tx = T::OmniverseProtocol::get_transaction_data(
 				delayed_tx.sender,
+				PALLET_NAME.to_vec(),
 				delayed_tx.token_id.clone(),
 				delayed_tx.nonce,
 			)
@@ -1573,7 +1575,10 @@ pub mod pallet {
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
 			Self::execute_transaction(&delayed_tx.token_id, &omni_tx.tx_data)?;
-			Self::deposit_event(Event::TransactionExecuted{pk: delayed_tx.sender, nonce: delayed_tx.nonce});
+			Self::deposit_event(Event::TransactionExecuted {
+				pk: delayed_tx.sender,
+				nonce: delayed_tx.nonce,
+			});
 
 			Ok(())
 		}

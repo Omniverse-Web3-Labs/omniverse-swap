@@ -34,6 +34,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use sp_std::vec::*;
 use std::time::{Duration, SystemTime};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -105,6 +106,7 @@ impl OmniverseProtocol {
 
 impl OmniverseAccounts for OmniverseProtocol {
 	fn verify_transaction(
+		_pallet_name: &Vec<u8>,
 		_token_id: &Vec<u8>,
 		data: &OmniverseTransactionData,
 	) -> Result<VerifyResult, VerifyError> {
@@ -115,7 +117,7 @@ impl OmniverseAccounts for OmniverseProtocol {
 		Ok(VerifyResult::Success)
 	}
 
-	fn get_transaction_count(_pk: [u8; 64], _token_id: Vec<u8>) -> u128 {
+	fn get_transaction_count(_pk: [u8; 64], _pallet_name: Vec<u8>, _token_id: Vec<u8>) -> u128 {
 		0
 	}
 
@@ -129,6 +131,7 @@ impl OmniverseAccounts for OmniverseProtocol {
 
 	fn get_transaction_data(
 		_pk: [u8; 64],
+		_pallet_name: Vec<u8>,
 		_token_id: Vec<u8>,
 		_nonce: u128,
 	) -> Option<OmniverseTx> {

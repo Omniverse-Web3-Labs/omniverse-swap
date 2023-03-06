@@ -39,10 +39,11 @@ pub fn get_transaction_hash(data: &OmniverseTransactionData) -> [u8; 32] {
 
 impl<T: Config> OmniverseAccounts for Pallet<T> {
 	fn verify_transaction(
+		pallet_name: &Vec<u8>,
 		token_id: &Vec<u8>,
 		data: &OmniverseTransactionData,
 	) -> Result<VerifyResult, VerifyError> {
-		let nonce = TransactionCount::<T>::get(&data.from, token_id);
+		let nonce = TransactionCount::<T>::get((&data.from, pallet_name, token_id));
 
 		let tx_hash_bytes = super::functions::get_transaction_hash(&data);
 
@@ -57,8 +58,8 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		if nonce == data.nonce {
 			// Add to transaction recorder
 			let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
-			TransactionRecorder::<T>::insert(&data.from, &(token_id.clone(), nonce), omni_tx);
-			TransactionCount::<T>::insert(&data.from, token_id, nonce + 1);
+			TransactionRecorder::<T>::insert((&data.from, pallet_name, &token_id.clone(), nonce), omni_tx);
+			TransactionCount::<T>::insert((&data.from, pallet_name, token_id), nonce + 1);
 			// if data.chain_id == T::ChainId::get() {
 			// 	Self::deposit_event(Event::TransactionSent(data.from, token_id.clone(), nonce));
 			// }
@@ -66,7 +67,7 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		} else if nonce > data.nonce {
 			// Check conflicts
 			let his_tx =
-				TransactionRecorder::<T>::get(&data.from, &(token_id.clone(), data.nonce)).unwrap();
+				TransactionRecorder::<T>::get((&data.from, pallet_name, &token_id.clone(), nonce)).unwrap();
 			let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data);
 			if his_tx_hash != tx_hash_bytes {
 				let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
@@ -84,8 +85,8 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		}
 	}
 
-	fn get_transaction_count(pk: [u8; 64], token_id: Vec<u8>) -> u128 {
-		Self::transaction_count(pk, token_id)
+	fn get_transaction_count(pk: [u8; 64], pallet_name: Vec<u8>, token_id: Vec<u8>) -> u128 {
+		Self::transaction_count((pk, pallet_name, token_id))
 	}
 
 	fn is_malicious(pk: [u8; 64]) -> bool {
@@ -103,8 +104,8 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		T::ChainId::get()
 	}
 
-	fn get_transaction_data(pk: [u8; 64], token_id: Vec<u8>, nonce: u128) -> Option<OmniverseTx> {
-		TransactionRecorder::<T>::get(pk, &(token_id, nonce))
+	fn get_transaction_data(pk: [u8; 64], pallet_name: Vec<u8>, token_id: Vec<u8>, nonce: u128) -> Option<OmniverseTx> {
+		TransactionRecorder::<T>::get((pk, pallet_name, token_id, nonce))
 	}
 
 	fn get_cooling_down_time() -> u64 {
