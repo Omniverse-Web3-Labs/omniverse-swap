@@ -274,7 +274,7 @@ parameter_types! {
 	pub const AssetDeposit: Balance = 10 * UNITS; // 10 UNITS deposit to create fungible asset class
 	pub const AssetAccountDeposit: Balance = UNITS;
 	pub const ApprovalDeposit: Balance = EXISTENTIAL_DEPOSIT;
-	pub const StringLimit: u32 = 50;
+	pub const StringLimit: u32 = 256;
 	/// Key = 32 bytes, Value = 36 bytes (32+1+1+1+1)
 	// https://github.com/paritytech/substrate/blob/069917b/frame/assets/src/lib.rs#L257L271
 	pub const MetadataDepositBase: Balance = UNITS;

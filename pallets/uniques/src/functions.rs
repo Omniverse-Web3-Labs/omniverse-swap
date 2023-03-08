@@ -311,8 +311,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				assets.retain(|&x| x != quantity);
 			}
 			Tokens::<T, I>::insert(&omniverse_token.token_id, &from, assets);
-			let dest_assets =
-				Tokens::<T, I>::get(&omniverse_token.token_id, &from).unwrap_or(Vec::new());
+			let mut dest_assets =
+				Tokens::<T, I>::get(&omniverse_token.token_id, &to).unwrap_or(Vec::new());
+			dest_assets.push(quantity);
 			Tokens::<T, I>::insert(&omniverse_token.token_id, &to, dest_assets);
 		} else {
 			return Err(Error::<T, I>::UnknownCollection.into());
