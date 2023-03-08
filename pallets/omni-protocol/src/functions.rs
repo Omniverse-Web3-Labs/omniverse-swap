@@ -12,7 +12,7 @@ pub fn get_transaction_hash(data: &OmniverseTransactionData) -> [u8; 32] {
 	let mut raw = Vec::<u8>::new();
 	raw.extend_from_slice(&mut u128::to_be_bytes(data.nonce).as_slice());
 	raw.extend_from_slice(&mut u32::to_be_bytes(data.chain_id).as_slice());
-	raw.append(&mut data.initiator_address.clone().as_mut());
+	raw.extend(data.initiator_address.clone());
 	raw.extend_from_slice(&mut data.from.clone());
 
 	let mut bytes_data = Vec::<u8>::new();

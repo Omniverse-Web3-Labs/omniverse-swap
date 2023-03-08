@@ -955,7 +955,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						Account::<T, I>::get(&id, source).ok_or(Error::<T, I>::NoAccount)?;
 						debug_assert!(details.supply >= actual, "checked in prep; qed");
 					} else {
-						return Err(Error::<T, I>::UnkonwnProtocolType.into());
+						return Err(Error::<T, I>::UnknownProtocolType.into());
 					}
 				}
 				let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();

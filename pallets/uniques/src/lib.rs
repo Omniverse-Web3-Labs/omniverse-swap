@@ -336,6 +336,13 @@ pub mod pallet {
 	pub type TokenId2CollectionId<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Blake2_128Concat, Vec<u8>, T::CollectionId>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn token_id_of_member)]
+	// key: (chain_id, member_address)
+	// value: token_id
+	pub type TokenIdofMember<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, (u32, Vec<u8>), Vec<u8>>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config<I>, I: 'static = ()> {
@@ -506,6 +513,12 @@ pub mod pallet {
 			pk: [u8; 64],
 			nonce: u128,
 		},
+
+		// set omniverse members
+		MembersSet {
+			token_id: Vec<u8>,
+			members: Vec<(u32, Vec<u8>)>,
+		},
 	}
 
 	#[pallet::error]
@@ -565,7 +578,7 @@ pub mod pallet {
 		TxNotExisted,
 		NotExecutable,
 		DelayedTxNotExisted,
-		UnkonwnProtocolType,
+		UnknownProtocolType,
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
@@ -1748,6 +1761,32 @@ pub mod pallet {
 				pk: delayed_tx.sender,
 				nonce: delayed_tx.nonce,
 			});
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn set_members(
+			origin: OriginFor<T>,
+			token_id: Vec<u8>,
+			members: Vec<(u32, Vec<u8>)>,
+		) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			// Check if the token exists.
+			let mut token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::UnknownCollection)?;
+
+			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
+
+			token.add_members(members.clone());
+			
+			for member in members.clone().into_iter() {
+				TokenIdofMember::<T, I>::insert(member, token_id.clone());
+			}
+			// Update storage
+			TokensInfo::<T, I>::insert(&token_id, token);
+
+			Self::deposit_event(Event::MembersSet { token_id, members });
 
 			Ok(())
 		}
