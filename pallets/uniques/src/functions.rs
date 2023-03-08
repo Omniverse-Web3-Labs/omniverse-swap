@@ -460,11 +460,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					DelayedTx::new(data.from, omniverse_token.token_id.clone(), data.nonce),
 				);
 				DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
-				Self::deposit_event(Event::TransactionSent {
-					pk: data.from,
-					token_id: omniverse_token.token_id,
-					nonce: data.nonce,
-				});
+				if T::OmniverseProtocol::get_chain_id() == data.chain_id {
+					Self::deposit_event(Event::TransactionSent {
+						pk: data.from,
+						token_id: omniverse_token.token_id,
+						nonce: data.nonce,
+					});
+				}
 			},
 		}
 
