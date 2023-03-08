@@ -451,7 +451,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							collection_details.admin == source || details.owner == source;
 						ensure!(is_permitted, Error::<T, I>::NoPermission);
 					} else {
-						return Err(Error::<T, I>::UnkonwnProtocolType.into());
+						return Err(Error::<T, I>::UnknownProtocolType.into());
 					}
 				}
 				let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();

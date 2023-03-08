@@ -367,6 +367,13 @@ pub mod pallet {
 		pub accounts: Vec<(T::AssetId, T::AccountId, T::Balance)>,
 	}
 
+	#[pallet::storage]
+	#[pallet::getter(fn token_id_of_member)]
+	// key: (chain_id, member_address)
+	// value: token_id
+	pub type TokenIdofMember<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, (u32, Vec<u8>), Vec<u8>>;
+
 	#[cfg(feature = "std")]
 	impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
 		fn default() -> Self {
@@ -614,7 +621,7 @@ pub mod pallet {
 		TxNotExisted,
 		NotExecutable,
 		DelayedTxNotExisted,
-		UnkonwnProtocolType,
+		UnknownProtocolType,
 	}
 
 	#[pallet::call]
@@ -1498,9 +1505,15 @@ pub mod pallet {
 			// Update storage.
 			TokensInfo::<T, I>::insert(
 				&token_id,
-				OmniverseToken::new(owner.clone(), owner_pk, token_id.clone(), members),
+				OmniverseToken::new(owner.clone(), owner_pk, token_id.clone(), members.clone()),
 			);
 
+			if let Some(members) = members {
+				for member in members.clone().into_iter() {
+					TokenIdofMember::<T, I>::insert(member, token_id.clone());
+				}
+			}
+			
 			// Integrate assets
 			let admin = owner.clone();
 
@@ -1597,7 +1610,10 @@ pub mod pallet {
 			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
 
 			token.add_members(members.clone());
-
+			
+			for member in members.clone().into_iter() {
+				TokenIdofMember::<T, I>::insert(member, token_id.clone());
+			}
 			// Update storage
 			TokensInfo::<T, I>::insert(&token_id, token);
 
