@@ -1,125 +1,176 @@
-# Assets Module
+# Omniverse Assets Module
 
-A simple, secure module for dealing with fungible assets.
+A simple, secure module for dealing with Omniverse fungible assets, based on pallet_asset.
 
 ## Overview
 
-The Assets module provides functionality for asset management of fungible asset classes
-with a fixed supply, including:
+The Assets module provides functionality for asset management of Omniverse fungible asset classes, including:
 
-* Asset Issuance
-* Asset Transfer
-* Asset Destruction
-
-To use it in your runtime, you need to implement the assets [`assets::Config`](https://docs.rs/pallet-assets/latest/pallet_assets/pallet/trait.Config.html).
-
-The supported dispatchable functions are documented in the [`assets::Call`](https://docs.rs/pallet-assets/latest/pallet_assets/pallet/enum.Call.html) enum.
+* Fungible asset Create
+* Fungible asset Mint
+* Fungible asset Transfer
+* Fungible asset Burn
 
 ### Terminology
 
-* **Asset issuance:** The creation of a new asset, whose total supply will belong to the
-  account that issues the asset.
-* **Asset transfer:** The action of transferring assets from one account to another.
-* **Asset destruction:** The process of an account removing its entire holding of an asset.
+* **Omniverse Account:** The o-account is be expressed as a public key created by the elliptic curve secp256k1.
+* **Account nonce:** The account nonce is used to ensure that a user's transactions are executed sequentially.
+* **Omniverse signature:** An omniverse transaction must be signed by a user with his private key. Currently, Secp256k1 is supported.
+* **Transaction verification:** Before accepting an omniverse transaction, the signature, nonce and the hash of the transaction data will be verified.
+* **Asset Create:** The creation of a new asset.
+* **Asset Mint:** Token owner mint amount ominverse token to one o-account.
+* **Asset transfer:** The action of transferring assets from one o-account to another o-account.
+* **Asset Burn:** The process of an account removing its entire holding of an asset.
 * **Fungible asset:** An asset whose units are interchangeable.
-* **Non-fungible asset:** An asset for which each unit has unique characteristics.
 
 ### Goals
 
 The assets system in Substrate is designed to make the following possible:
 
-* Issue a unique asset to its creator's account.
-* Move assets between accounts.
-* Remove an account's balance of an asset when requested by that account's owner and update
-  the asset's total supply.
+* Mint a unique Omniverse asset to one o-account.
+* Move Omniverse assets between o-accounts.
+* Remove an o-account's balance of an Omniverse asset when requested by that o-account's owner and update
+  the omniverse asset's total supply.
 
 ## Interface
 
 ### Dispatchable Functions
 
-* `issue` - Issues the total supply of a new fungible asset to the account of the caller of the function.
-* `transfer` - Transfers an `amount` of units of fungible asset `id` from the balance of
-the function caller's account (`origin`) to a `target` account.
-* `destroy` - Destroys the entire holding of a fungible asset `id` associated with the account
-that called the function.
-
-Please refer to the [`Call`](https://docs.rs/pallet-assets/latest/pallet_assets/enum.Call.html) enum and its associated variants for documentation on each function.
+* `create_token` - Create a new fungible asset.
+* `send_transaction` - Send an omniverse transaction
 
 ### Public Functions
-<!-- Original author of descriptions: @gavofyork -->
 
-* `balance` - Get the asset `id` balance of `who`.
-* `total_supply` - Get the total supply of an asset `id`.
-
-Please refer to the [`Pallet`](https://docs.rs/pallet-assets/latest/pallet_assets/pallet/struct.Pallet.html) struct for details on publicly available functions.
+* `tokens` - Get the Omniverse asset `token_id` balance of `who`.
+* `tokens_info` - Get the owner and members of an Omniverse asset `token_id`.
 
 ## Usage
 
-The following example shows how to use the Assets module in your runtime by exposing public functions to:
+The following example shows how to use the Omniverse Assets module in your runtime by exposing public functions to:
 
-* Issue a new fungible asset for a token distribution event (airdrop).
-* Query the fungible asset holding balance of an account.
-* Query the total supply of a fungible asset that has been issued.
-
-### Prerequisites
-
-Import the Assets module and types and derive your runtime's configuration traits from the Assets module trait.
+* Create new Omniverse token.
+* Send an omniverse transaction
+* Query the omniverse fungible asset holding balance of an account.
+* Query the owner and members of an Omniverse asset.
 
 ### Simple Code Snippet
 
+#### Create new Omniverse token
+
+`token_id` and `asset_id` can be mapped to each other. `asset_id` is self-increase, users can't specify by themselves.
+
 ```rust
-use pallet_assets as assets;
-use sp_runtime::ArithmeticError;
+#[pallet::weight(0)]
+pub fn create_token(
+  origin: OriginFor<T>,
+  owner_pk: [u8; 64],
+  token_id: Vec<u8>,
+  members: Option<Vec<(u32, Vec<u8>)>>,
+) -> DispatchResult {
+  ...
+  // Check if the token exists
+  ensure!(!TokensInfo::<T, I>::contains_key(&token_id), Error::<T, I>::InUse);
+  // Update storage.
+  TokensInfo::<T, I>::insert(
+    &token_id,
+    OmniverseToken::new(owner.clone(), owner_pk, token_id.clone(), members.clone()),
+  );
+  ...
+  let mut id = CurrentAssetId::<T, I>::get(&token_id).unwrap_or_default();
+  while Asset::<T, I>::contains_key(id) {
+    id.saturating_inc();
+  }
 
-#[frame_support::pallet]
-pub mod pallet {
-    use super::*;
-    use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::*;
+  AssetId2TokenId::<T, I>::insert(&id, token_id.clone());
+  TokenId2AssetId::<T, I>::insert(&token_id, id.clone());
 
-    #[pallet::pallet]
-    pub struct Pallet<T>(_);
-
-    #[pallet::config]
-    pub trait Config: frame_system::Config + assets::Config {}
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {
-        pub fn issue_token_airdrop(origin: OriginFor<T>) -> DispatchResult {
-            let sender = ensure_signed(origin)?;
-
-            const ACCOUNT_ALICE: u64 = 1;
-            const ACCOUNT_BOB: u64 = 2;
-            const COUNT_AIRDROP_RECIPIENTS: u64 = 2;
-            const TOKENS_FIXED_SUPPLY: u64 = 100;
-
-            ensure!(!COUNT_AIRDROP_RECIPIENTS.is_zero(), ArithmeticError::DivisionByZero);
-
-            let asset_id = Self::next_asset_id();
-
-            <NextAssetId<T>>::mutate(|asset_id| *asset_id += 1);
-            <Balances<T>>::insert((asset_id, &ACCOUNT_ALICE), TOKENS_FIXED_SUPPLY / COUNT_AIRDROP_RECIPIENTS);
-            <Balances<T>>::insert((asset_id, &ACCOUNT_BOB), TOKENS_FIXED_SUPPLY / COUNT_AIRDROP_RECIPIENTS);
-            <TotalSupply<T>>::insert(asset_id, TOKENS_FIXED_SUPPLY);
-
-            Self::deposit_event(Event::Issued(asset_id, sender, TOKENS_FIXED_SUPPLY));
-            Ok(())
-        }
-    }
+  Asset::<T, I>::insert(
+    id,
+    AssetDetails {
+      owner: owner.clone(),
+      issuer: admin.clone(),
+      admin: admin.clone(),
+      freezer: admin.clone(),
+      supply: Zero::zero(),
+      deposit,
+      min_balance: Zero::zero(),
+      is_sufficient: false,
+      accounts: 0,
+      sufficients: 0,
+      approvals: 0,
+      is_frozen: false,
+    },
+  );
+  Self::deposit_event(Event::Created { asset_id: id, creator: owner, owner: admin });
+  Ok(())
 }
 ```
 
-## Assumptions
+#### Send an omniverse transaction
 
-Below are assumptions that must be held when using this module.  If any of
-them are violated, the behavior of this module is undefined.
+`send_transaction` will verify the legitimacy of the transaction, including Omniverse signature and pallet-assets related verification. After successful verification, it will be inserted into the delayed queue and then wait to be exected.
 
-* The total count of assets should be less than
-  `Config::AssetId::max_value()`.
+```rust
+#[pallet::weight(0)]
+pub fn send_transaction(
+  origin: OriginFor<T>,
+  token_id: Vec<u8>,
+  data: OmniverseTransactionData,
+) -> DispatchResult {
+  ensure_signed(origin)?;
 
-## Related Modules
+  Self::send_transaction_external(token_id, &data)?;
 
-* [`System`](https://docs.rs/frame-system/latest/frame_system/)
-* [`Support`](https://docs.rs/frame-support/latest/frame_support/)
+  Ok(())
+}
+
+fn send_transaction_external(
+  token_id: Vec<u8>,
+  data: &OmniverseTransactionData,
+) -> Result<FactoryResult, DispatchError> {
+  ...
+  Self::handle_transaction(token, data)?;
+  ...
+}
+
+pub(super) fn handle_transaction(
+		omniverse_token: OmniverseToken<T::AccountId>,
+		data: &OmniverseTransactionData,
+	) -> Result<FactoryResult, DispatchError> {
+  ...
+  // Verify the signature
+  let ret = T::OmniverseProtocol::verify_transaction(
+    &PALLET_NAME.to_vec(),
+    &omniverse_token.token_id,
+    &data,
+  );
+  ...
+  match ret {
+    ...
+    Ok(VerifyResult::Success) => {
+      // Verify balance
+      {
+        ...
+        if fungible.op == TRANSFER {
+          ...
+        } else if fungible.op == MINT {
+          ...
+        } else if fungible.op == BURN {
+          ...
+        } else {
+          return Err(Error::<T, I>::UnknownProtocolType.into());
+        }
+      }
+      let (delayed_executing_index, delayed_index) = DelayedIndex::<T, I>::get();
+      DelayedTransactions::<T, I>::insert(
+        delayed_index,
+        DelayedTx::new(data.from, omniverse_token.token_id.clone(), data.nonce),
+      );
+      DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
+    },
+  }
+  ...
+}
+```
 
 License: Apache-2.0
