@@ -12,8 +12,6 @@ The omniverse protocol module will manage the underlying omniverse accounts, inc
 
 To use it in your runtime, you need to implement the Omniverse Protocol `omni-protocol::Config`.
 
-The supported dispatchable functions are documented in the [`assets::Call`]().
-
 ### Terminology
 
 * **Account nonce:** The account nonce is used to ensure that a user's transactions are executed sequentially.
@@ -32,13 +30,13 @@ The omniverse protocol system in Substrate is designed to make the following pos
 
 ### Dispatchable Functions
 
-The pallet supply the underlying functions for omniverse applications, so it has $no dispatchable functions$.
+The pallet supply the underlying functions for omniverse applications, so it has **no dispatchable functions**.
 
 ### Public Functions
 
 * `get_transaction_count` - Get the transaction count of a user.  
 * `get_transaction_data` - Get the transaction data of a user at a nonce.  
-* `is_malicious` - If a user is malicious.  
+* `is_malicious` - Get the maliciousness of a user.  
 * `get_cooling_down_time` - Get the time within which only one transaction can be sent.  
 * `get_chain_id` - Get the omniverse chain id.  
 * `verify_transaction` - Verify an omniverse transaction, and return the result.
@@ -53,7 +51,7 @@ The following example shows how to use the Omniverse Protocol module in your run
 
 ### Prerequisites
 
-Import the Omniverse Protocol module and types and add configuration with Omniverse Protocol traits into the `Config`.
+Import the Omniverse Protocol module and types and add configuration field with Omniverse Protocol traits into the `Config`.
 
 ### Simple Code Snippet
 
