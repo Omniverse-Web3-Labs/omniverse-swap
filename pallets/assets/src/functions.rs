@@ -910,39 +910,30 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						.ok_or(Error::<T, I>::Unknown)?;
 					let fungible = Fungible::decode(&mut data.payload.as_slice())
 						.map_err(|_| Error::<T, I>::DecodePayloadFailed)?;
-					let dest_pk: [u8; 64] = fungible
-						.ex_data
-						.try_into()
-						.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
-					// let dest_pk: [u8; 64] = data
-					// 	.op_data
-					// 	.clone()
-					// 	.try_into()
-					// 	.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
-					let dest = Self::to_account(&dest_pk)?;
 					let amount = T::Balance::try_from(fungible.amount)
 						.unwrap_or(<T as Config<I>>::Balance::default());
 					if fungible.op == TRANSFER {
-						// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
-						// Convert public key to account id
-						// let dest = Self::to_account(&dest_pk)?;
-						// let amount = T::Balance::try_from(fungible.amount)
-						// 	.unwrap_or(<T as Config<I>>::Balance::default());
 						let f = TransferFlags {
 							keep_alive: false,
 							best_effort: false,
 							burn_dust: false,
 						};
+						let dest_pk: [u8; 64] = fungible
+							.ex_data
+							.try_into()
+							.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+						let dest = Self::to_account(&dest_pk)?;
 						let debit = Self::prep_debit(id, &source, amount, f.into())?;
 						Self::prep_credit(id, &dest, amount, debit, f.burn_dust)?;
 					} else if fungible.op == MINT {
-						// let mint_data = MintTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
-						// let dest = Self::to_account(&dest_pk)?;
-						// let amount = T::Balance::try_from(fungible.amount)
-						// 	.unwrap_or(<T as Config<I>>::Balance::default());
 						if data.from != omniverse_token.owner_pk {
 							return Err(Error::<T, I>::SignerNotOwner.into());
 						}
+						let dest_pk: [u8; 64] = fungible
+							.ex_data
+							.try_into()
+							.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+						let dest = Self::to_account(&dest_pk)?;
 						Self::can_increase(id, &dest, amount, true).into_result()?;
 						let details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
 						ensure!(source == details.issuer, Error::<T, I>::NoPermission);
@@ -988,10 +979,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 		let fungible = Fungible::decode(&mut data.payload.as_slice())
 			.map_err(|_| Error::<T, I>::DecodePayloadFailed)?;
-		let dest_pk: [u8; 64] = fungible
-			.ex_data
-			.try_into()
-			.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 		// let dest_pk: [u8; 64] = data
 		// 	.op_data
 		// 	.clone()
@@ -1004,6 +991,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let id = TokenId2AssetId::<T, I>::get(token_id).ok_or(Error::<T, I>::Unknown)?;
 
 		if fungible.op == TRANSFER {
+			let dest_pk: [u8; 64] = fungible
+				.ex_data
+				.try_into()
+				.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 			let dest = Self::to_account(&dest_pk)?;
 			Self::omniverse_transfer(omniverse_token, data.from, dest_pk, fungible.amount)?;
 			let f = TransferFlags { keep_alive: false, best_effort: false, burn_dust: false };
@@ -1013,6 +1004,10 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			if data.from != omniverse_token.owner_pk {
 				return Err(Error::<T, I>::SignerNotOwner.into());
 			}
+			let dest_pk: [u8; 64] = fungible
+				.ex_data
+				.try_into()
+				.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 			let dest = Self::to_account(&dest_pk)?;
 			Self::omniverse_mint(omniverse_token, dest_pk, fungible.amount);
 			Self::do_mint(id, &dest, amount, Some(origin))?;
