@@ -4,7 +4,7 @@ A module for managing omniverse accounts.
 
 ## Overview
 
-The omniverse Protocol module will manage the underlying omniverse accounts, including:
+The omniverse protocol module will manage the underlying omniverse accounts, including:
 
 * Omniverse Signature
 * Account Nonce
@@ -32,89 +32,67 @@ The omniverse protocol system in Substrate is designed to make the following pos
 
 ### Dispatchable Functions
 
-* `issue` - Issues the total supply of a new fungible asset to the account of the caller of the function.
-* `transfer` - Transfers an `amount` of units of fungible asset `id` from the balance of
-the function caller's account (`origin`) to a `target` account.
-* `destroy` - Destroys the entire holding of a fungible asset `id` associated with the account
-that called the function.
-
-Please refer to the [`Call`](https://docs.rs/pallet-assets/latest/pallet_assets/enum.Call.html) enum and its associated variants for documentation on each function.
+The pallet supply the underlying functions for omniverse applications, so it has $no dispatchable functions$.
 
 ### Public Functions
-<!-- Original author of descriptions: @gavofyork -->
 
-* `balance` - Get the asset `id` balance of `who`.
-* `total_supply` - Get the total supply of an asset `id`.
+* `get_transaction_count` - Get the transaction count of a user.  
+* `get_transaction_data` - Get the transaction data of a user at a nonce.  
+* `is_malicious` - If a user is malicious.  
+* `get_cooling_down_time` - Get the time within which only one transaction can be sent.  
+* `get_chain_id` - Get the omniverse chain id.  
+* `verify_transaction` - Verify an omniverse transaction, and return the result.
 
-Please refer to the [`Pallet`](https://docs.rs/pallet-assets/latest/pallet_assets/pallet/struct.Pallet.html) struct for details on publicly available functions.
 
 ## Usage
 
-The following example shows how to use the Assets module in your runtime by exposing public functions to:
+The following example shows how to use the Omniverse Protocol module in your runtime by exposing public functions to:
 
-* Issue a new fungible asset for a token distribution event (airdrop).
-* Query the fungible asset holding balance of an account.
-* Query the total supply of a fungible asset that has been issued.
+* Verify an omniverse transaction.
+* Query the maliciousness of a user.
 
 ### Prerequisites
 
-Import the Assets module and types and derive your runtime's configuration traits from the Assets module trait.
+Import the Omniverse Protocol module and types and add configuration with Omniverse Protocol traits into the `Config`.
 
 ### Simple Code Snippet
 
 ```rust
-use pallet_assets as assets;
-use sp_runtime::ArithmeticError;
+pub static PALLET_NAME: [u8; 6] = [0x61, 0x73, 0x73, 0x65, 0x74, 0x73];
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use pallet_omniverse_protocol::{traits::OmniverseAccounts, OmniverseTransactionData};
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + assets::Config {}
+    pub trait Config: frame_system::Config {
+      type OmniverseProtocol: OmniverseAccounts;
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        pub fn issue_token_airdrop(origin: OriginFor<T>) -> DispatchResult {
-            let sender = ensure_signed(origin)?;
+        pub(super) fn handle_transaction(
+          token_id: Vec<u8>,
+          data: &OmniverseTransactionData,
+        ) -> Result<(), DispatchError> {
+          // Check if the sender is honest
+          ensure!(!T::OmniverseProtocol::is_malicious(data.from), Error::<T>::UserIsMalicious);
 
-            const ACCOUNT_ALICE: u64 = 1;
-            const ACCOUNT_BOB: u64 = 2;
-            const COUNT_AIRDROP_RECIPIENTS: u64 = 2;
-            const TOKENS_FIXED_SUPPLY: u64 = 100;
+          // Verify the signature
+          let ret = T::OmniverseProtocol::verify_transaction(
+            &PALLET_NAME.to_vec(),
+            &token_id,
+            &data,
+          );
 
-            ensure!(!COUNT_AIRDROP_RECIPIENTS.is_zero(), ArithmeticError::DivisionByZero);
-
-            let asset_id = Self::next_asset_id();
-
-            <NextAssetId<T>>::mutate(|asset_id| *asset_id += 1);
-            <Balances<T>>::insert((asset_id, &ACCOUNT_ALICE), TOKENS_FIXED_SUPPLY / COUNT_AIRDROP_RECIPIENTS);
-            <Balances<T>>::insert((asset_id, &ACCOUNT_BOB), TOKENS_FIXED_SUPPLY / COUNT_AIRDROP_RECIPIENTS);
-            <TotalSupply<T>>::insert(asset_id, TOKENS_FIXED_SUPPLY);
-
-            Self::deposit_event(Event::Issued(asset_id, sender, TOKENS_FIXED_SUPPLY));
-            Ok(())
+          Ok(())
         }
     }
 }
 ```
-
-## Assumptions
-
-Below are assumptions that must be held when using this module.  If any of
-them are violated, the behavior of this module is undefined.
-
-* The total count of assets should be less than
-  `Config::AssetId::max_value()`.
-
-## Related Modules
-
-* [`System`](https://docs.rs/frame-system/latest/frame_system/)
-* [`Support`](https://docs.rs/frame-support/latest/frame_support/)
-
-License: Apache-2.0
