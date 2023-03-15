@@ -21,6 +21,32 @@ The project is built based on [Node Template](https://github.com/substrate-devel
 
 ## Development
 
+### Create a pallet
+
+If you want to create a new Omniverse dApp, you need to create a pallet first, you can refer to the [document](https://docs.substrate.io/tutorials/work-with-pallets/add-a-pallet/) of Substrate.
+
+### Implement the method `send_transaction`
+
+The method `send_transaction` is used to commit an Omniverset transaction to the chain you are building, the declaration is like this:
+
+```
+pub fn send_transaction(
+			origin: OriginFor<T>,
+			data: OmniverseTransactionData,
+		) -> DispatchResult;
+```
+
+- origin: The account who signs the transaction  
+- data: The data for the Omniverse transaction
+
+You will see that there is also a paremeter `token_id` in Assets module, it is not needed by all bussiness.
+
+### Develop bussiness code
+
+Feel free to write your bussiness, you can also refer to the examples we provide: [`Assets`](./pallets/assets/) and [`Uniques`](./pallets/uniques/).
+
+If the your code needs to interact with `Omniverse Protocol` module, you can refer to the [document](./pallets/omni-protocol/README.md).
+
 ## Run node
 
 Building and running a node follows the tutorial of [Substrate Node](https://github.com/substrate-developer-hub/substrate-node-template/blob/main/README.md).
