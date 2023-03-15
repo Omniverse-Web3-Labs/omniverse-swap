@@ -349,7 +349,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		if assets.contains(&quantity) {
 			assets.retain(|&x| x != quantity);
 		} else {
-			return Err(Error::<T, I>::AlreadyExists.into());
+			return Err(Error::<T, I>::NotExist.into());
 		}
 		Tokens::<T, I>::insert(&omniverse_token.token_id, &account, assets);
 		Ok(())
@@ -406,21 +406,16 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						.ok_or(Error::<T, I>::UnknownCollection)?;
 					let assets = Assets::decode(&mut data.payload.as_slice())
 						.map_err(|_| Error::<T, I>::DecodePayloadFailed)?;
-					let dest_pk: [u8; 64] = assets
-						.ex_data
-						.try_into()
-						.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
-					// let dest_pk: [u8; 64] = data
-					// 	.op_data
-					// 	.clone()
-					// 	.try_into()
-					// 	.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
-					Self::to_account(&dest_pk)?;
 					let item = T::ItemId::try_from(assets.quantity)
 						.unwrap_or(<T as Config<I>>::ItemId::default());
 					let collection_details =
 						Collection::<T, I>::get(&id).ok_or(Error::<T, I>::UnknownCollection)?;
 					if assets.op == TRANSFER {
+						let dest_pk: [u8; 64] = assets
+							.ex_data
+							.try_into()
+							.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+						Self::to_account(&dest_pk)?;
 						ensure!(!collection_details.is_frozen, Error::<T, I>::Frozen);
 						ensure!(!T::Locker::is_locked(id, item), Error::<T, I>::Locked);
 
@@ -432,6 +427,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							ensure!(approved, Error::<T, I>::NoPermission);
 						}
 					} else if assets.op == MINT {
+
+						let dest_pk: [u8; 64] = assets
+							.ex_data
+							.try_into()
+							.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
+						Self::to_account(&dest_pk)?;
 						ensure!(
 							!Item::<T, I>::contains_key(id, item),
 							Error::<T, I>::AlreadyExists
@@ -448,8 +449,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					} else if assets.op == BURN {
 						let details = Item::<T, I>::get(&id, &item)
 							.ok_or(Error::<T, I>::UnknownCollection)?;
-						let is_permitted =
-							collection_details.admin == source || details.owner == source;
+						let is_permitted = details.owner == source;
 						ensure!(is_permitted, Error::<T, I>::NoPermission);
 					} else {
 						return Err(Error::<T, I>::UnknownProtocolType.into());
@@ -486,13 +486,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// let transfer_data = TransferTokenOp::decode(&mut data.op_data.as_slice()).unwrap();
 		let assets = Assets::decode(&mut data.payload.as_slice())
 			.map_err(|_| Error::<T, I>::DecodePayloadFailed)?;
-		let dest_pk: [u8; 64] =
-			assets.ex_data.try_into().map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
-		// let dest_pk: [u8; 64] = data
-		// 	.op_data
-		// 	.clone()
-		// 	.try_into()
-		// 	.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 		// Convert public key to account id
 		let origin = Self::to_account(&data.from)?;
 		let item_id =
@@ -501,6 +494,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			TokenId2CollectionId::<T, I>::get(token_id).ok_or(Error::<T, I>::UnknownCollection)?;
 
 		if assets.op == TRANSFER {
+			let dest_pk: [u8; 64] =
+				assets.ex_data.try_into().map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 			let dest = Self::to_account(&dest_pk)?;
 			Self::do_transfer(id, item_id, dest, |collection_details, details| {
 				if details.owner != origin && collection_details.admin != origin {
@@ -511,6 +506,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				Ok(())
 			})?;
 		} else if assets.op == MINT {
+			let dest_pk: [u8; 64] =
+				assets.ex_data.try_into().map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 			let dest = Self::to_account(&dest_pk)?;
 			Self::do_mint(id, item_id, dest, |collection_details| {
 				ensure!(collection_details.issuer == origin, Error::<T, I>::NoPermission);
@@ -518,14 +515,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			})?;
 			Self::omniverse_mint(omniverse_token, dest_pk, assets.quantity)?;
 		} else if assets.op == BURN {
-			let check_owner = Some(origin.clone());
-			Self::do_burn(id, item_id, |collection_details, details| {
-				let is_permitted = collection_details.admin == origin || details.owner == origin;
+			// let check_owner = Some(origin.clone());
+			Self::do_burn(id, item_id, |_, details| {
+				let is_permitted = details.owner == origin;
 				ensure!(is_permitted, Error::<T, I>::NoPermission);
-				ensure!(
-					check_owner.map_or(true, |o| o == details.owner),
-					Error::<T, I>::WrongOwner
-				);
+				// ensure!(
+				// 	check_owner.map_or(true, |o| o == details.owner),
+				// 	Error::<T, I>::WrongOwner
+				// );
 				Ok(())
 			})?;
 			Self::omniverse_burn(omniverse_token, data.from, assets.quantity)?;

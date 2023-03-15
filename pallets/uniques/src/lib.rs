@@ -566,6 +566,7 @@ pub mod pallet {
 		DoMintFailed,
 
 		/// decode
+		NotExist,
 		DecodePayloadFailed,
 		SerializePublicKeyFailed,
 		WrongDestination,
