@@ -23,7 +23,7 @@ The project is built based on [Node Template](https://github.com/substrate-devel
 
 ### Create a pallet
 
-If you want to create a new Omniverse dApp, you need to create a pallet first, you can refer to the [document](https://docs.substrate.io/tutorials/work-with-pallets/add-a-pallet/) of Substrate.
+If you want to create a new Omniverse dApp, you need to create a pallet first, you can refer to the document of [Substrate](https://docs.substrate.io/tutorials/work-with-pallets/add-a-pallet/).
 
 ### Implement the method `send_transaction`
 
@@ -41,11 +41,11 @@ pub fn send_transaction(
 
 You will see that there is also a paremeter `token_id` in Assets module, it is not needed by all bussiness.
 
-### Develop bussiness code
+### Write bussiness code
 
 Feel free to write your bussiness, you can also refer to the examples we provide: [`Assets`](./pallets/assets/) and [`Uniques`](./pallets/uniques/).
 
-If the your code needs to interact with `Omniverse Protocol` module, you can refer to the [document](./pallets/omni-protocol/README.md).
+If the your code needs to interact with `Omniverse Protocol` module, you can refer to the document of [`Omniverse Protocol`](./pallets/omni-protocol/README.md).
 
 ## Run node
 
