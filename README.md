@@ -17,9 +17,9 @@ This repository is an implementation template of Omniverse Protocol in form of p
 The project is built based on [Node Template](https://github.com/substrate-developer-hub/substrate-node-template), you can go there for more details.
 
 ### Pallets
-- [Assets](./pallets/assets/README.md): A simple, secure module for dealing with fungible assets.
-- [Uniques](./pallets/uniques/README.md): A simple, secure module for dealing with non-fungible assets.
-- [Omniverse Protocol](./pallets/omni-protocol/README.md): A module for managing Omniverse accounts.
+- [Assets](./pallets/assets/README.md): A simple, secure module for dealing with **Omniverse** fungible assets.
+- [Uniques](./pallets/uniques/README.md): A simple, secure module for dealing with **Omniverse** non-fungible assets.
+- [Omniverse Protocol](./pallets/omni-protocol/README.md): A module for managing **Omniverse** accounts.
 
 ## Development
 
