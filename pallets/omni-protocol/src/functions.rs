@@ -3,11 +3,11 @@ use super::*;
 use crate::{Fungible, OmniverseTransactionData};
 use codec::Decode;
 use frame_support::traits::{Get, UnixTime};
+use scale_info::prelude::string::{String, ToString};
 use sp_core::Hasher;
 use sp_io::crypto;
 use sp_runtime::traits::Keccak256;
 use sp_std::vec::Vec;
-use scale_info::prelude::string::{String, ToString};
 
 const ETHEREUM_PREFIX: &str = "\x19Ethereum Signed Message:\n";
 
@@ -71,7 +71,10 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		if nonce == data.nonce {
 			// Add to transaction recorder
 			let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
-			TransactionRecorder::<T>::insert((&data.from, pallet_name, &token_id.clone(), nonce), omni_tx);
+			TransactionRecorder::<T>::insert(
+				(&data.from, pallet_name, &token_id.clone(), nonce),
+				omni_tx,
+			);
 			TransactionCount::<T>::insert((&data.from, pallet_name, token_id), nonce + 1);
 			// if data.chain_id == T::ChainId::get() {
 			// 	Self::deposit_event(Event::TransactionSent(data.from, token_id.clone(), nonce));
@@ -79,9 +82,15 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 			Ok(VerifyResult::Success)
 		} else if nonce > data.nonce {
 			// Check conflicts
-			let his_tx =
-				TransactionRecorder::<T>::get((&data.from, pallet_name, &token_id.clone(), data.nonce)).unwrap();
-			let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data, with_ethereum);
+			let his_tx = TransactionRecorder::<T>::get((
+				&data.from,
+				pallet_name,
+				&token_id.clone(),
+				data.nonce,
+			))
+			.unwrap();
+			let his_tx_hash =
+				super::functions::get_transaction_hash(&his_tx.tx_data, with_ethereum);
 			if his_tx_hash != tx_hash_bytes {
 				let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
 				let evil_tx = EvilTxData::new(omni_tx, nonce);
@@ -117,7 +126,12 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		T::ChainId::get()
 	}
 
-	fn get_transaction_data(pk: [u8; 64], pallet_name: Vec<u8>, token_id: Vec<u8>, nonce: u128) -> Option<OmniverseTx> {
+	fn get_transaction_data(
+		pk: [u8; 64],
+		pallet_name: Vec<u8>,
+		token_id: Vec<u8>,
+		nonce: u128,
+	) -> Option<OmniverseTx> {
 		TransactionRecorder::<T>::get((pk, pallet_name, token_id, nonce))
 	}
 

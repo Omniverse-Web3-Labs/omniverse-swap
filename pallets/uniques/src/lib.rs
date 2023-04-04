@@ -50,10 +50,7 @@ use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
-	traits::{
-		tokens::Locker, Currency, EnsureOriginWithArg, ReservableCurrency,
-		UnixTime,
-	},
+	traits::{tokens::Locker, Currency, EnsureOriginWithArg, ReservableCurrency, UnixTime},
 	transactional,
 };
 use frame_system::Config as SystemConfig;
@@ -1803,12 +1800,13 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
 			// Check if the token exists.
-			let mut token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::UnknownCollection)?;
+			let mut token =
+				TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::UnknownCollection)?;
 
 			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
 
 			token.add_members(members.clone());
-			
+
 			for member in members.clone().into_iter() {
 				TokenIdofMember::<T, I>::insert(member, token_id.clone());
 			}

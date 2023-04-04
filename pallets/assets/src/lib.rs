@@ -1513,7 +1513,7 @@ pub mod pallet {
 					TokenIdofMember::<T, I>::insert(member, token_id.clone());
 				}
 			}
-			
+
 			// Integrate assets
 			let admin = owner.clone();
 
@@ -1610,7 +1610,7 @@ pub mod pallet {
 			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
 
 			token.add_members(members.clone());
-			
+
 			for member in members.clone().into_iter() {
 				TokenIdofMember::<T, I>::insert(member, token_id.clone());
 			}

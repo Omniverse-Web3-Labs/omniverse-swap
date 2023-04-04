@@ -386,7 +386,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			&PALLET_NAME.to_vec(),
 			&omniverse_token.token_id,
 			&data,
-			false
+			false,
 		);
 		let ret = match ret {
 			Err(_) => T::OmniverseProtocol::verify_transaction(
@@ -437,7 +437,6 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							ensure!(approved, Error::<T, I>::NoPermission);
 						}
 					} else if assets.op == MINT {
-
 						let dest_pk: [u8; 64] = assets
 							.ex_data
 							.try_into()

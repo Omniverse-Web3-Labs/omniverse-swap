@@ -111,8 +111,8 @@ impl OmniverseTransactionData {
 		Self { nonce, chain_id, initiator_address, from, payload, signature: [0; 65] }
 	}
 
-	pub fn get_raw_hash(&self) -> [u8; 32] {
-		functions::get_transaction_hash(self, false)
+	pub fn get_raw_hash(&self, with_ethereum: bool) -> [u8; 32] {
+		functions::get_transaction_hash(self, with_ethereum)
 	}
 
 	pub fn set_signature(&mut self, signature: [u8; 65]) {

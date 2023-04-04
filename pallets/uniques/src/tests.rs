@@ -19,7 +19,6 @@
 
 use crate::{mock::*, *};
 use frame_support::{assert_err, assert_ok, traits::Currency};
-use sp_std::prelude::*;
 use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts, Fungible, OmniverseTransactionData, MINT, TRANSFER,
@@ -28,6 +27,7 @@ use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
 use sp_core::Hasher;
 use sp_runtime::traits::BlakeTwo256;
+use sp_std::prelude::*;
 
 fn items() -> Vec<(u64, u32, u32)> {
 	let mut r: Vec<_> = Account::<Test>::iter().map(|x| x.0).collect();
@@ -97,7 +97,7 @@ fn encode_transfer(
 	let payload = Fungible::new(TRANSFER, pk_to.into(), amount).encode();
 	let mut tx_data =
 		OmniverseTransactionData::new(nonce, CHAIN_ID, INITIATOR_ADDRESS, pk_from, payload);
-	let h = tx_data.get_raw_hash();
+	let h = tx_data.get_raw_hash(false);
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
 	let sig: RecoverableSignature = secp.sign_ecdsa_recoverable(&message, &from.0);
@@ -117,7 +117,7 @@ fn encode_mint(
 	let pk_to: [u8; 64] = to.serialize_uncompressed()[1..].try_into().expect("");
 	let payload = Fungible::new(MINT, pk_to.into(), amount).encode();
 	let mut tx_data = OmniverseTransactionData::new(nonce, CHAIN_ID, TOKEN_ID, pk_from, payload);
-	let h = tx_data.get_raw_hash();
+	let h = tx_data.get_raw_hash(false);
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
 	let sig: RecoverableSignature = secp.sign_ecdsa_recoverable(&message, &from.0);
@@ -181,7 +181,10 @@ fn transfer_item_not_exist_not_work() {
 		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key, 1, nonce);
-		assert_err!(Uniques::send_transaction_external(vec![1], &data), Error::<Test>::UnknownCollection);
+		assert_err!(
+			Uniques::send_transaction_external(vec![1], &data),
+			Error::<Test>::UnknownCollection
+		);
 	});
 }
 
@@ -231,7 +234,6 @@ fn mint_item_with_wrong_signature_not_work() {
 		);
 	});
 }
-
 
 #[test]
 fn not_owner_mint_item_with_not_work() {
@@ -348,7 +350,10 @@ fn not_item_owner_transfer_should_not_work() {
 		assert_ok!(Uniques::trigger_execution(RuntimeOrigin::signed(1)));
 
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 10, nonce);
-		assert_err!(Uniques::send_transaction_external(TOKEN_ID, &data), Error::<Test>::UnknownCollection);
+		assert_err!(
+			Uniques::send_transaction_external(TOKEN_ID, &data),
+			Error::<Test>::UnknownCollection
+		);
 	});
 }
 

@@ -29,7 +29,7 @@ fn encode_transfer(
 	let payload = Fungible::new(TRANSFER, pk_to.into(), amount).encode();
 	// let data = TokenOpcode::new(TRANSFER, transfer_data).encode();
 	let mut tx_data = OmniverseTransactionData::new(nonce, CHAIN_ID, Vec::new(), pk_from, payload);
-	let h = tx_data.get_raw_hash();
+	let h = tx_data.get_raw_hash(false);
 	let message = Message::from_slice(h.as_slice())
 		.expect("messages must be 32 bytes and are expected to be hashes");
 	let sig: RecoverableSignature = secp.sign_ecdsa_recoverable(&message, &from.0);
