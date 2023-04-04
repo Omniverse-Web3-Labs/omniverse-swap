@@ -7,8 +7,11 @@ use sp_core::Hasher;
 use sp_io::crypto;
 use sp_runtime::traits::Keccak256;
 use sp_std::vec::Vec;
+use scale_info::prelude::string::{String, ToString};
 
-pub fn get_transaction_hash(data: &OmniverseTransactionData) -> [u8; 32] {
+const ETHEREUM_PREFIX: &str = "\x19Ethereum Signed Message:\n";
+
+pub fn get_transaction_hash(data: &OmniverseTransactionData, with_ethereum: bool) -> [u8; 32] {
 	let mut raw = Vec::<u8>::new();
 	raw.extend_from_slice(&mut u128::to_be_bytes(data.nonce).as_slice());
 	raw.extend_from_slice(&mut u32::to_be_bytes(data.chain_id).as_slice());
@@ -31,7 +34,16 @@ pub fn get_transaction_hash(data: &OmniverseTransactionData) -> [u8; 32] {
 	bytes_data.extend(fungible.ex_data.clone());
 	bytes_data.extend_from_slice(&mut u128::to_be_bytes(fungible.amount).as_slice());
 	raw.append(&mut bytes_data.as_mut());
-
+	if with_ethereum {
+		// let v: Vec<u8> = wrap_ethereum.into_bytes();
+		// raw.extend(ETHEREUM_PREFIX.as_bytes());
+		let etherum_prefix = String::from(ETHEREUM_PREFIX);
+		let prefix = etherum_prefix + &raw.len().to_string();
+		let mut prefix_vec = prefix.as_bytes().to_vec();
+		// raw.prepend(prefix.as_bytes());
+		prefix_vec.extend(raw);
+		raw = prefix_vec;
+	}
 	let h = Keccak256::hash(raw.as_slice());
 
 	h.0
@@ -42,10 +54,11 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		pallet_name: &Vec<u8>,
 		token_id: &Vec<u8>,
 		data: &OmniverseTransactionData,
+		with_ethereum: bool,
 	) -> Result<VerifyResult, VerifyError> {
 		let nonce = TransactionCount::<T>::get((&data.from, pallet_name, token_id));
 
-		let tx_hash_bytes = super::functions::get_transaction_hash(&data);
+		let tx_hash_bytes = super::functions::get_transaction_hash(&data, with_ethereum);
 
 		let recoverd_pk = crypto::secp256k1_ecdsa_recover(&data.signature, &tx_hash_bytes)
 			.map_err(|_| VerifyError::SignatureError)?;
@@ -67,8 +80,8 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 		} else if nonce > data.nonce {
 			// Check conflicts
 			let his_tx =
-				TransactionRecorder::<T>::get((&data.from, pallet_name, &token_id.clone(), nonce)).unwrap();
-			let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data);
+				TransactionRecorder::<T>::get((&data.from, pallet_name, &token_id.clone(), data.nonce)).unwrap();
+			let his_tx_hash = super::functions::get_transaction_hash(&his_tx.tx_data, with_ethereum);
 			if his_tx_hash != tx_hash_bytes {
 				let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
 				let evil_tx = EvilTxData::new(omni_tx, nonce);

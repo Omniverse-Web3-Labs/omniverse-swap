@@ -6,6 +6,7 @@ pub trait OmniverseAccounts {
 		pallet_name: &Vec<u8>,
 		token_id: &Vec<u8>,
 		data: &OmniverseTransactionData,
+		with_ethereum: bool,
 	) -> Result<VerifyResult, VerifyError>;
 	fn get_transaction_count(pk: [u8; 64], pallet_name: Vec<u8>, token_id: Vec<u8>) -> u128;
 	fn is_malicious(pk: [u8; 64]) -> bool;

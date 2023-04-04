@@ -112,7 +112,7 @@ impl OmniverseTransactionData {
 	}
 
 	pub fn get_raw_hash(&self) -> [u8; 32] {
-		functions::get_transaction_hash(self)
+		functions::get_transaction_hash(self, false)
 	}
 
 	pub fn set_signature(&mut self, signature: [u8; 65]) {

@@ -890,7 +890,17 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			&PALLET_NAME.to_vec(),
 			&omniverse_token.token_id,
 			&data,
+			false
 		);
+		let ret = match ret {
+			Err(_) => T::OmniverseProtocol::verify_transaction(
+				&PALLET_NAME.to_vec(),
+				&omniverse_token.token_id,
+				&data,
+				true,
+			),
+			_ => ret,
+		};
 		let source = Self::to_account(&data.from)?;
 
 		match ret {

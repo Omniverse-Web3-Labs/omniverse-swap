@@ -163,6 +163,7 @@ impl OmniverseAccounts for OmniverseProtocol {
 		_pallet_name: &Vec<u8>,
 		_token_id: &Vec<u8>,
 		data: &OmniverseTransactionData,
+		_with_ethereum: bool,
 	) -> Result<VerifyResult, VerifyError> {
 		if data.signature == [0; 65] {
 			return Err(VerifyError::SignatureError);

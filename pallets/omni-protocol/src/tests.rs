@@ -68,7 +68,7 @@ fn it_fails_for_signature_error() {
 		data.set_signature([0; 65]);
 
 		assert_err!(
-			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data),
+			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data, false),
 			VerifyError::SignatureError
 		);
 	});
@@ -90,7 +90,7 @@ fn it_fails_for_signer_not_caller_error() {
 		let data = encode_transaction(&secp, (new_secret_key, public_key), nonce, amount);
 
 		assert_err!(
-			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data),
+			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data, false),
 			VerifyError::SignerNotCaller
 		);
 	});
@@ -111,7 +111,7 @@ fn it_fails_for_nonce_error() {
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
 		assert_err!(
-			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data),
+			OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data, false),
 			VerifyError::NonceError
 		);
 	});
@@ -132,7 +132,7 @@ fn it_works_for_verify_transaction() {
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
-		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME , &Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME , &Vec::new(), &data, false);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 	});
@@ -153,7 +153,7 @@ fn it_works_for_malicious_transaction() {
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
-		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data, false);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 		// Encode a malicious transaction
@@ -163,7 +163,7 @@ fn it_works_for_malicious_transaction() {
 		let data_new =
 			encode_transaction_with_data(&secp, (secret_key, public_key), nonce, payload);
 
-		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data_new);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data_new, false);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Malicious);
 	});
@@ -184,11 +184,11 @@ fn it_works_for_duplicated_transaction() {
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
-		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data, false);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 
-		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data, false);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Duplicated);
 	});
