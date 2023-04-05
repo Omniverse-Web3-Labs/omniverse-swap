@@ -42,12 +42,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		) -> DispatchResult,
 	) -> DispatchResult {
 		let collection_details =
-			Collection::<T, I>::get(&collection).ok_or(Error::<T, I>::UnknownCollection)?;
+			Collection::<T, I>::get(collection).ok_or(Error::<T, I>::UnknownCollection)?;
 		ensure!(!collection_details.is_frozen, Error::<T, I>::Frozen);
 		ensure!(!T::Locker::is_locked(collection, item), Error::<T, I>::Locked);
 
 		let mut details =
-			Item::<T, I>::get(&collection, &item).ok_or(Error::<T, I>::UnknownCollection)?;
+			Item::<T, I>::get(collection, item).ok_or(Error::<T, I>::UnknownCollection)?;
 		ensure!(!details.is_frozen, Error::<T, I>::Frozen);
 		with_details(&collection_details, &mut details)?;
 
@@ -61,8 +61,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// and then claiming the item back.
 		details.approved = None;
 
-		Item::<T, I>::insert(&collection, &item, &details);
-		ItemPriceOf::<T, I>::remove(&collection, &item);
+		Item::<T, I>::insert(collection, item, &details);
+		ItemPriceOf::<T, I>::remove(collection, item);
 
 		Self::deposit_event(Event::Transferred {
 			collection,
@@ -101,7 +101,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			},
 		);
 
-		CollectionAccount::<T, I>::insert(&owner, &collection, ());
+		CollectionAccount::<T, I>::insert(&owner, collection, ());
 		Self::deposit_event(event);
 		Ok(())
 	}
@@ -124,19 +124,19 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			);
 			ensure!(collection_details.attributes == witness.attributes, Error::<T, I>::BadWitness);
 
-			for (item, details) in Item::<T, I>::drain_prefix(&collection) {
+			for (item, details) in Item::<T, I>::drain_prefix(collection) {
 				Account::<T, I>::remove((&details.owner, &collection, &item));
 			}
 			#[allow(deprecated)]
-			ItemMetadataOf::<T, I>::remove_prefix(&collection, None);
+			ItemMetadataOf::<T, I>::remove_prefix(collection, None);
 			#[allow(deprecated)]
-			ItemPriceOf::<T, I>::remove_prefix(&collection, None);
-			CollectionMetadataOf::<T, I>::remove(&collection);
+			ItemPriceOf::<T, I>::remove_prefix(collection, None);
+			CollectionMetadataOf::<T, I>::remove(collection);
 			#[allow(deprecated)]
 			Attribute::<T, I>::remove_prefix((&collection,), None);
-			CollectionAccount::<T, I>::remove(&collection_details.owner, &collection);
+			CollectionAccount::<T, I>::remove(&collection_details.owner, collection);
 			T::Currency::unreserve(&collection_details.owner, collection_details.total_deposit);
-			CollectionMaxSupply::<T, I>::remove(&collection);
+			CollectionMaxSupply::<T, I>::remove(collection);
 
 			Self::deposit_event(Event::Destroyed { collection });
 
@@ -156,36 +156,32 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	) -> DispatchResult {
 		ensure!(!Item::<T, I>::contains_key(collection, item), Error::<T, I>::AlreadyExists);
 
-		Collection::<T, I>::try_mutate(
-			&collection,
-			|maybe_collection_details| -> DispatchResult {
-				let collection_details =
-					maybe_collection_details.as_mut().ok_or(Error::<T, I>::UnknownCollection)?;
+		Collection::<T, I>::try_mutate(collection, |maybe_collection_details| -> DispatchResult {
+			let collection_details =
+				maybe_collection_details.as_mut().ok_or(Error::<T, I>::UnknownCollection)?;
 
-				with_details(collection_details)?;
+			with_details(collection_details)?;
 
-				if let Ok(max_supply) = CollectionMaxSupply::<T, I>::try_get(&collection) {
-					ensure!(collection_details.items < max_supply, Error::<T, I>::MaxSupplyReached);
-				}
+			if let Ok(max_supply) = CollectionMaxSupply::<T, I>::try_get(collection) {
+				ensure!(collection_details.items < max_supply, Error::<T, I>::MaxSupplyReached);
+			}
 
-				let items =
-					collection_details.items.checked_add(1).ok_or(ArithmeticError::Overflow)?;
-				collection_details.items = items;
+			let items = collection_details.items.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+			collection_details.items = items;
 
-				let deposit = match collection_details.free_holding {
-					true => Zero::zero(),
-					false => T::ItemDeposit::get(),
-				};
-				T::Currency::reserve(&collection_details.owner, deposit)?;
-				collection_details.total_deposit += deposit;
+			let deposit = match collection_details.free_holding {
+				true => Zero::zero(),
+				false => T::ItemDeposit::get(),
+			};
+			T::Currency::reserve(&collection_details.owner, deposit)?;
+			collection_details.total_deposit += deposit;
 
-				let owner = owner.clone();
-				Account::<T, I>::insert((&owner, &collection, &item), ());
-				let details = ItemDetails { owner, approved: None, is_frozen: false, deposit };
-				Item::<T, I>::insert(&collection, &item, details);
-				Ok(())
-			},
-		)?;
+			let owner = owner.clone();
+			Account::<T, I>::insert((&owner, &collection, &item), ());
+			let details = ItemDetails { owner, approved: None, is_frozen: false, deposit };
+			Item::<T, I>::insert(collection, item, details);
+			Ok(())
+		})?;
 
 		Self::deposit_event(Event::Issued { collection, item, owner });
 		Ok(())
@@ -197,12 +193,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		with_details: impl FnOnce(&CollectionDetailsFor<T, I>, &ItemDetailsFor<T, I>) -> DispatchResult,
 	) -> DispatchResult {
 		let owner = Collection::<T, I>::try_mutate(
-			&collection,
+			collection,
 			|maybe_collection_details| -> Result<T::AccountId, DispatchError> {
 				let collection_details =
 					maybe_collection_details.as_mut().ok_or(Error::<T, I>::UnknownCollection)?;
-				let details = Item::<T, I>::get(&collection, &item)
-					.ok_or(Error::<T, I>::UnknownCollection)?;
+				let details =
+					Item::<T, I>::get(collection, item).ok_or(Error::<T, I>::UnknownCollection)?;
 				with_details(collection_details, &details)?;
 
 				// Return the deposit.
@@ -213,9 +209,9 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			},
 		)?;
 
-		Item::<T, I>::remove(&collection, &item);
+		Item::<T, I>::remove(collection, item);
 		Account::<T, I>::remove((&owner, &collection, &item));
-		ItemPriceOf::<T, I>::remove(&collection, &item);
+		ItemPriceOf::<T, I>::remove(collection, item);
 
 		Self::deposit_event(Event::Burned { collection, item, owner });
 		Ok(())
@@ -228,11 +224,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		price: Option<ItemPrice<T, I>>,
 		whitelisted_buyer: Option<T::AccountId>,
 	) -> DispatchResult {
-		let details = Item::<T, I>::get(&collection, &item).ok_or(Error::<T, I>::UnknownItem)?;
+		let details = Item::<T, I>::get(collection, item).ok_or(Error::<T, I>::UnknownItem)?;
 		ensure!(details.owner == sender, Error::<T, I>::NoPermission);
 
 		if let Some(ref price) = price {
-			ItemPriceOf::<T, I>::insert(&collection, &item, (price, whitelisted_buyer.clone()));
+			ItemPriceOf::<T, I>::insert(collection, item, (price, whitelisted_buyer.clone()));
 			Self::deposit_event(Event::ItemPriceSet {
 				collection,
 				item,
@@ -240,7 +236,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				whitelisted_buyer,
 			});
 		} else {
-			ItemPriceOf::<T, I>::remove(&collection, &item);
+			ItemPriceOf::<T, I>::remove(collection, item);
 			Self::deposit_event(Event::ItemPriceRemoved { collection, item });
 		}
 
@@ -253,11 +249,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		buyer: T::AccountId,
 		bid_price: ItemPrice<T, I>,
 	) -> DispatchResult {
-		let details = Item::<T, I>::get(&collection, &item).ok_or(Error::<T, I>::UnknownItem)?;
+		let details = Item::<T, I>::get(collection, item).ok_or(Error::<T, I>::UnknownItem)?;
 		ensure!(details.owner != buyer, Error::<T, I>::NoPermission);
 
 		let price_info =
-			ItemPriceOf::<T, I>::get(&collection, &item).ok_or(Error::<T, I>::NotForSale)?;
+			ItemPriceOf::<T, I>::get(collection, item).ok_or(Error::<T, I>::NotForSale)?;
 
 		ensure!(bid_price >= price_info.0, Error::<T, I>::BidTooLow);
 
@@ -272,7 +268,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			ExistenceRequirement::KeepAlive,
 		)?;
 
-		let old_owner = details.owner.clone();
+		let old_owner = details.owner;
 
 		Self::do_transfer(collection, item, buyer.clone(), |_, _| Ok(()))?;
 
@@ -306,15 +302,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	) -> Result<(), DispatchError> {
 		// let from_asset = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
 		// let assets = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
-		if let Some(mut assets) = Tokens::<T, I>::get(&omniverse_token.token_id, &from) {
+		if let Some(mut assets) = Tokens::<T, I>::get(&omniverse_token.token_id, from) {
 			if assets.contains(&quantity) {
 				assets.retain(|&x| x != quantity);
 			}
-			Tokens::<T, I>::insert(&omniverse_token.token_id, &from, assets);
+			Tokens::<T, I>::insert(&omniverse_token.token_id, from, assets);
 			let mut dest_assets =
-				Tokens::<T, I>::get(&omniverse_token.token_id, &to).unwrap_or(Vec::new());
+				Tokens::<T, I>::get(&omniverse_token.token_id, to).unwrap_or(Vec::new());
 			dest_assets.push(quantity);
-			Tokens::<T, I>::insert(&omniverse_token.token_id, &to, dest_assets);
+			Tokens::<T, I>::insert(&omniverse_token.token_id, to, dest_assets);
 		} else {
 			return Err(Error::<T, I>::UnknownCollection.into());
 		}
@@ -328,12 +324,12 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 	) -> Result<(), DispatchError> {
 		// let from_asset = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
 		// let assets = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
-		let mut assets = Tokens::<T, I>::get(&omniverse_token.token_id, &to).unwrap_or(Vec::new());
+		let mut assets = Tokens::<T, I>::get(&omniverse_token.token_id, to).unwrap_or(Vec::new());
 		if assets.contains(&quantity) {
 			return Err(Error::<T, I>::AlreadyExists.into());
 		}
 		assets.push(quantity);
-		Tokens::<T, I>::insert(&omniverse_token.token_id, &to, assets);
+		Tokens::<T, I>::insert(&omniverse_token.token_id, to, assets);
 		Ok(())
 	}
 
@@ -345,13 +341,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		// let from_asset = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
 		// let assets = Tokens::<T, I>::get(&omniverse_token.token_id, &from);
 		let mut assets =
-			Tokens::<T, I>::get(&omniverse_token.token_id, &account).unwrap_or(Vec::new());
+			Tokens::<T, I>::get(&omniverse_token.token_id, account).unwrap_or(Vec::new());
 		if assets.contains(&quantity) {
 			assets.retain(|&x| x != quantity);
 		} else {
 			return Err(Error::<T, I>::NotExist.into());
 		}
-		Tokens::<T, I>::insert(&omniverse_token.token_id, &account, assets);
+		Tokens::<T, I>::insert(&omniverse_token.token_id, account, assets);
 		Ok(())
 	}
 
@@ -360,7 +356,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		data: &OmniverseTransactionData,
 	) -> Result<FactoryResult, DispatchError> {
 		// Check if the token exists.
-		let token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::UnknownCollection)?;
+		let token = TokensInfo::<T, I>::get(token_id).ok_or(Error::<T, I>::UnknownCollection)?;
 
 		Self::handle_transaction(token, data)?;
 
@@ -385,7 +381,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let ret = T::OmniverseProtocol::verify_transaction(
 			&PALLET_NAME.to_vec(),
 			&omniverse_token.token_id,
-			&data,
+			data,
 		);
 		let source = Self::to_account(&data.from)?;
 
@@ -409,7 +405,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					let item = T::ItemId::try_from(assets.quantity)
 						.unwrap_or(<T as Config<I>>::ItemId::default());
 					let collection_details =
-						Collection::<T, I>::get(&id).ok_or(Error::<T, I>::UnknownCollection)?;
+						Collection::<T, I>::get(id).ok_or(Error::<T, I>::UnknownCollection)?;
 					if assets.op == TRANSFER {
 						let dest_pk: [u8; 64] = assets
 							.ex_data
@@ -419,15 +415,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						ensure!(!collection_details.is_frozen, Error::<T, I>::Frozen);
 						ensure!(!T::Locker::is_locked(id, item), Error::<T, I>::Locked);
 
-						let mut details = Item::<T, I>::get(&id, &item)
-							.ok_or(Error::<T, I>::UnknownCollection)?;
+						let mut details =
+							Item::<T, I>::get(id, item).ok_or(Error::<T, I>::UnknownCollection)?;
 						ensure!(!details.is_frozen, Error::<T, I>::Frozen);
 						if details.owner != source && collection_details.admin != source {
 							let approved = details.approved.take().map_or(false, |i| i == source);
 							ensure!(approved, Error::<T, I>::NoPermission);
 						}
 					} else if assets.op == MINT {
-
 						let dest_pk: [u8; 64] = assets
 							.ex_data
 							.try_into()
@@ -439,7 +434,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						);
 						ensure!(collection_details.issuer == source, Error::<T, I>::NoPermission);
 
-						if let Ok(max_supply) = CollectionMaxSupply::<T, I>::try_get(&id) {
+						if let Ok(max_supply) = CollectionMaxSupply::<T, I>::try_get(id) {
 							ensure!(
 								collection_details.items < max_supply,
 								Error::<T, I>::MaxSupplyReached
@@ -447,8 +442,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						}
 						collection_details.items.checked_add(1).ok_or(ArithmeticError::Overflow)?;
 					} else if assets.op == BURN {
-						let details = Item::<T, I>::get(&id, &item)
-							.ok_or(Error::<T, I>::UnknownCollection)?;
+						let details =
+							Item::<T, I>::get(id, item).ok_or(Error::<T, I>::UnknownCollection)?;
 						let is_permitted = details.owner == source;
 						ensure!(is_permitted, Error::<T, I>::NoPermission);
 					} else {
@@ -479,7 +474,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		data: &OmniverseTransactionData,
 	) -> Result<(), DispatchError> {
 		let omniverse_token =
-			TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::UnknownCollection)?;
+			TokensInfo::<T, I>::get(token_id).ok_or(Error::<T, I>::UnknownCollection)?;
 
 		// Execute
 		// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();

@@ -19,7 +19,6 @@
 
 use crate::{mock::*, *};
 use frame_support::{assert_err, assert_ok, traits::Currency};
-use sp_std::prelude::*;
 use pallet_omniverse_protocol::OmniverseTx;
 use pallet_omniverse_protocol::{
 	traits::OmniverseAccounts, Fungible, OmniverseTransactionData, MINT, TRANSFER,
@@ -28,6 +27,7 @@ use secp256k1::rand::rngs::OsRng;
 use secp256k1::{ecdsa::RecoverableSignature, Message, PublicKey, Secp256k1, SecretKey};
 use sp_core::Hasher;
 use sp_runtime::traits::BlakeTwo256;
+use sp_std::prelude::*;
 
 fn items() -> Vec<(u64, u32, u32)> {
 	let mut r: Vec<_> = Account::<Test>::iter().map(|x| x.0).collect();
@@ -181,7 +181,10 @@ fn transfer_item_not_exist_not_work() {
 		let nonce = OmniverseProtocol::get_transaction_count(pk, PALLET_NAME.to_vec(), Vec::new());
 
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key, 1, nonce);
-		assert_err!(Uniques::send_transaction_external(vec![1], &data), Error::<Test>::UnknownCollection);
+		assert_err!(
+			Uniques::send_transaction_external(vec![1], &data),
+			Error::<Test>::UnknownCollection
+		);
 	});
 }
 
@@ -231,7 +234,6 @@ fn mint_item_with_wrong_signature_not_work() {
 		);
 	});
 }
-
 
 #[test]
 fn not_owner_mint_item_with_not_work() {
@@ -348,7 +350,10 @@ fn not_item_owner_transfer_should_not_work() {
 		assert_ok!(Uniques::trigger_execution(RuntimeOrigin::signed(1)));
 
 		let data = encode_transfer(&secp, (secret_key, public_key), public_key_to, 10, nonce);
-		assert_err!(Uniques::send_transaction_external(TOKEN_ID, &data), Error::<Test>::UnknownCollection);
+		assert_err!(
+			Uniques::send_transaction_external(TOKEN_ID, &data),
+			Error::<Test>::UnknownCollection
+		);
 	});
 }
 

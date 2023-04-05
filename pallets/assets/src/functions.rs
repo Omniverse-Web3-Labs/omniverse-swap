@@ -556,7 +556,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let (credit, maybe_burn) = Self::prep_credit(id, dest, amount, debit, f.burn_dust)?;
 
 		let mut source_account =
-			Account::<T, I>::get(id, &source).ok_or(Error::<T, I>::NoAccount)?;
+			Account::<T, I>::get(id, source).ok_or(Error::<T, I>::NoAccount)?;
 		let mut source_died: Option<DeadConsequence> = None;
 
 		Asset::<T, I>::try_mutate(id, |maybe_details| -> DispatchResult {
@@ -584,7 +584,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			debug_assert!(source_account.balance >= debit, "checked in prep; qed");
 			source_account.balance = source_account.balance.saturating_sub(debit);
 
-			Account::<T, I>::try_mutate(id, &dest, |maybe_account| -> DispatchResult {
+			Account::<T, I>::try_mutate(id, dest, |maybe_account| -> DispatchResult {
 				match maybe_account {
 					Some(ref mut account) => {
 						// Calculate new balance; this will not saturate since it's already checked
@@ -613,11 +613,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				source_died =
 					Some(Self::dead_account(source, details, &source_account.reason, false));
 				if let Some(Remove) = source_died {
-					Account::<T, I>::remove(id, &source);
+					Account::<T, I>::remove(id, source);
 					return Ok(());
 				}
 			}
-			Account::<T, I>::insert(id, &source, &source_account);
+			Account::<T, I>::insert(id, source, source_account);
 			Ok(())
 		})?;
 
@@ -703,7 +703,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				debug_assert_eq!(details.accounts, 0);
 				debug_assert_eq!(details.sufficients, 0);
 
-				let metadata = Metadata::<T, I>::take(&id);
+				let metadata = Metadata::<T, I>::take(id);
 				T::Currency::unreserve(
 					&details.owner,
 					details.deposit.saturating_add(metadata.deposit),
@@ -889,7 +889,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		let ret = T::OmniverseProtocol::verify_transaction(
 			&PALLET_NAME.to_vec(),
 			&omniverse_token.token_id,
-			&data,
+			data,
 		);
 		let source = Self::to_account(&data.from)?;
 
@@ -935,15 +935,15 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 							.map_err(|_| Error::<T, I>::SerializePublicKeyFailed)?;
 						let dest = Self::to_account(&dest_pk)?;
 						Self::can_increase(id, &dest, amount, true).into_result()?;
-						let details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+						let details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
 						ensure!(source == details.issuer, Error::<T, I>::NoPermission);
 					} else if fungible.op == BURN {
 						let f = DebitFlags { keep_alive: false, best_effort: true };
 						let actual = Self::prep_debit(id, &source, amount, f)?;
-						let details = Asset::<T, I>::get(&id).ok_or(Error::<T, I>::Unknown)?;
+						let details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
 						ensure!(source == details.issuer, Error::<T, I>::NoPermission);
 						// Account::<T, I>::get(&id, source).
-						Account::<T, I>::get(&id, source).ok_or(Error::<T, I>::NoAccount)?;
+						Account::<T, I>::get(id, source).ok_or(Error::<T, I>::NoAccount)?;
 						debug_assert!(details.supply >= actual, "checked in prep; qed");
 					} else {
 						return Err(Error::<T, I>::UnknownProtocolType.into());
@@ -972,7 +972,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		token_id: &Vec<u8>,
 		data: &OmniverseTransactionData,
 	) -> Result<(), DispatchError> {
-		let omniverse_token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
+		let omniverse_token = TokensInfo::<T, I>::get(token_id).ok_or(Error::<T, I>::Unknown)?;
 
 		// Execute
 		// let op_data = TokenOpcode::decode(&mut data.data.as_slice()).unwrap();
@@ -1077,7 +1077,7 @@ impl<T: Config<I>, I: 'static> OmniverseTokenFactoryHandler for Pallet<T, I> {
 		data: &OmniverseTransactionData,
 	) -> Result<FactoryResult, DispatchError> {
 		// Check if the token exists.
-		let token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
+		let token = TokensInfo::<T, I>::get(token_id).ok_or(Error::<T, I>::Unknown)?;
 
 		Self::handle_transaction(token, data)?;
 

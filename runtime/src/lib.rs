@@ -281,7 +281,7 @@ parameter_types! {
 	pub const MetadataDepositPerByte: Balance = UNITS;
 
 	pub const CollectionDeposit: Balance = 100 * UNITS;
-	pub const ItemDeposit: Balance = 1 * UNITS;
+	pub const ItemDeposit: Balance = UNITS;
 	pub const AttributeDepositBase: Balance = UNITS;
 	pub const KeyLimit: u32 = 32;
 	pub const ValueLimit: u32 = 256;

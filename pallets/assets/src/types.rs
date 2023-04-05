@@ -291,7 +291,7 @@ pub struct OmniverseToken<AccountId> {
 	pub owner: AccountId,
 	pub owner_pk: [u8; 64],
 	pub token_id: Vec<u8>,
-	pub members: Vec<(u32, Vec<u8>)>,     // (chain_id, member_address)
+	pub members: Vec<(u32, Vec<u8>)>, // (chain_id, member_address)
 }
 
 impl<AccountId> OmniverseToken<AccountId> {

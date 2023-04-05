@@ -44,16 +44,14 @@ pub mod weights;
 
 use codec::{Decode, Encode};
 
+use sp_std::cmp::Ordering::{Greater, Less};
 use sp_std::prelude::*;
 
 use frame_support::{
 	dispatch::DispatchResult,
 	ensure,
 	pallet_prelude::DispatchResultWithPostInfo,
-	traits::{
-		tokens::Locker, Currency, EnsureOriginWithArg, ReservableCurrency,
-		UnixTime,
-	},
+	traits::{tokens::Locker, Currency, EnsureOriginWithArg, ReservableCurrency, UnixTime},
 	transactional,
 };
 use frame_system::Config as SystemConfig;
@@ -667,7 +665,7 @@ pub mod pallet {
 			);
 
 			if let Some(members) = members {
-				for member in members.clone().into_iter() {
+				for member in members.into_iter() {
 					TokenIdofMember::<T, I>::insert(member, token_id.clone());
 				}
 			}
@@ -680,8 +678,8 @@ pub mod pallet {
 				id.saturating_inc();
 			}
 
-			CollectionId2TokenId::<T, I>::insert(&id, token_id.clone());
-			TokenId2CollectionId::<T, I>::insert(&token_id, id.clone());
+			CollectionId2TokenId::<T, I>::insert(id, token_id.clone());
+			TokenId2CollectionId::<T, I>::insert(&token_id, id);
 
 			Self::do_create_collection(
 				id,
@@ -1443,7 +1441,7 @@ pub mod pallet {
 				.or_else(|origin| ensure_signed(origin).map(Some))?;
 
 			let mut collection_details =
-				Collection::<T, I>::get(&collection).ok_or(Error::<T, I>::UnknownCollection)?;
+				Collection::<T, I>::get(collection).ok_or(Error::<T, I>::UnknownCollection)?;
 
 			if let Some(check_owner) = &maybe_check_owner {
 				ensure!(check_owner == &collection_details.owner, Error::<T, I>::NoPermission);
@@ -1464,16 +1462,21 @@ pub mod pallet {
 						.saturating_mul(((data.len()) as u32).into())
 						.saturating_add(T::MetadataDepositBase::get());
 				}
-				if deposit > old_deposit {
-					T::Currency::reserve(&collection_details.owner, deposit - old_deposit)?;
-				} else if deposit < old_deposit {
-					T::Currency::unreserve(&collection_details.owner, old_deposit - deposit);
+
+				match deposit.cmp(&old_deposit) {
+					Greater => {
+						T::Currency::reserve(&collection_details.owner, deposit - old_deposit)?;
+					},
+					Less => {
+						T::Currency::unreserve(&collection_details.owner, old_deposit - deposit);
+					},
+					_ => {},
 				}
 				collection_details.total_deposit.saturating_accrue(deposit);
 
 				*metadata = Some(ItemMetadata { deposit, data: data.clone(), is_frozen });
 
-				Collection::<T, I>::insert(&collection, &collection_details);
+				Collection::<T, I>::insert(collection, &collection_details);
 				Self::deposit_event(Event::MetadataSet { collection, item, data, is_frozen });
 				Ok(())
 			})
@@ -1503,7 +1506,7 @@ pub mod pallet {
 				.or_else(|origin| ensure_signed(origin).map(Some))?;
 
 			let mut collection_details =
-				Collection::<T, I>::get(&collection).ok_or(Error::<T, I>::UnknownCollection)?;
+				Collection::<T, I>::get(collection).ok_or(Error::<T, I>::UnknownCollection)?;
 			if let Some(check_owner) = &maybe_check_owner {
 				ensure!(check_owner == &collection_details.owner, Error::<T, I>::NoPermission);
 			}
@@ -1519,7 +1522,7 @@ pub mod pallet {
 				T::Currency::unreserve(&collection_details.owner, deposit);
 				collection_details.total_deposit.saturating_reduce(deposit);
 
-				Collection::<T, I>::insert(&collection, &collection_details);
+				Collection::<T, I>::insert(collection, &collection_details);
 				Self::deposit_event(Event::MetadataCleared { collection, item });
 				Ok(())
 			})
@@ -1553,7 +1556,7 @@ pub mod pallet {
 				.or_else(|origin| ensure_signed(origin).map(Some))?;
 
 			let mut details =
-				Collection::<T, I>::get(&collection).ok_or(Error::<T, I>::UnknownCollection)?;
+				Collection::<T, I>::get(collection).ok_or(Error::<T, I>::UnknownCollection)?;
 			if let Some(check_owner) = &maybe_check_owner {
 				ensure!(check_owner == &details.owner, Error::<T, I>::NoPermission);
 			}
@@ -1570,14 +1573,18 @@ pub mod pallet {
 						.saturating_mul(((data.len()) as u32).into())
 						.saturating_add(T::MetadataDepositBase::get());
 				}
-				if deposit > old_deposit {
-					T::Currency::reserve(&details.owner, deposit - old_deposit)?;
-				} else if deposit < old_deposit {
-					T::Currency::unreserve(&details.owner, old_deposit - deposit);
+				match deposit.cmp(&old_deposit) {
+					Greater => {
+						T::Currency::reserve(&details.owner, deposit - old_deposit)?;
+					},
+					Less => {
+						T::Currency::unreserve(&details.owner, old_deposit - deposit);
+					},
+					_ => {},
 				}
 				details.total_deposit.saturating_accrue(deposit);
 
-				Collection::<T, I>::insert(&collection, details);
+				Collection::<T, I>::insert(collection, details);
 
 				*metadata = Some(CollectionMetadata { deposit, data: data.clone(), is_frozen });
 
@@ -1608,7 +1615,7 @@ pub mod pallet {
 				.or_else(|origin| ensure_signed(origin).map(Some))?;
 
 			let details =
-				Collection::<T, I>::get(&collection).ok_or(Error::<T, I>::UnknownCollection)?;
+				Collection::<T, I>::get(collection).ok_or(Error::<T, I>::UnknownCollection)?;
 			if let Some(check_owner) = &maybe_check_owner {
 				ensure!(check_owner == &details.owner, Error::<T, I>::NoPermission);
 			}
@@ -1803,12 +1810,13 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
 			// Check if the token exists.
-			let mut token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::UnknownCollection)?;
+			let mut token =
+				TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::UnknownCollection)?;
 
 			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
 
 			token.add_members(members.clone());
-			
+
 			for member in members.clone().into_iter() {
 				TokenIdofMember::<T, I>::insert(member, token_id.clone());
 			}

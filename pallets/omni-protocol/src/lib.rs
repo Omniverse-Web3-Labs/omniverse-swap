@@ -51,10 +51,10 @@ pub mod pallet {
 	pub type TransactionRecorder<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_128Concat, [u8; 64]>,		// public key
-			NMapKey<Blake2_128Concat, Vec<u8>>,			// pallet name
-			NMapKey<Blake2_128Concat, Vec<u8>>,			// token id
-			NMapKey<Blake2_128Concat, u128>,				// nonce
+			NMapKey<Blake2_128Concat, [u8; 64]>, // public key
+			NMapKey<Blake2_128Concat, Vec<u8>>,  // pallet name
+			NMapKey<Blake2_128Concat, Vec<u8>>,  // token id
+			NMapKey<Blake2_128Concat, u128>,     // nonce
 		),
 		OmniverseTx,
 	>;
@@ -77,9 +77,9 @@ pub mod pallet {
 	pub type TransactionCount<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_128Concat, [u8; 64]>,		// public key
-			NMapKey<Blake2_128Concat, Vec<u8>>,			// pallet name
-			NMapKey<Blake2_128Concat, Vec<u8>>,			// token id
+			NMapKey<Blake2_128Concat, [u8; 64]>, // public key
+			NMapKey<Blake2_128Concat, Vec<u8>>,  // pallet name
+			NMapKey<Blake2_128Concat, Vec<u8>>,  // token id
 		),
 		u128,
 		ValueQuery,

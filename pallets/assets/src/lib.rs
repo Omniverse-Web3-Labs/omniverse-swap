@@ -1509,11 +1509,11 @@ pub mod pallet {
 			);
 
 			if let Some(members) = members {
-				for member in members.clone().into_iter() {
+				for member in members.into_iter() {
 					TokenIdofMember::<T, I>::insert(member, token_id.clone());
 				}
 			}
-			
+
 			// Integrate assets
 			let admin = owner.clone();
 
@@ -1525,8 +1525,8 @@ pub mod pallet {
 				id.saturating_inc();
 			}
 
-			AssetId2TokenId::<T, I>::insert(&id, token_id.clone());
-			TokenId2AssetId::<T, I>::insert(&token_id, id.clone());
+			AssetId2TokenId::<T, I>::insert(id, token_id.clone());
+			TokenId2AssetId::<T, I>::insert(&token_id, id);
 
 			Asset::<T, I>::insert(
 				id,
@@ -1610,7 +1610,7 @@ pub mod pallet {
 			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
 
 			token.add_members(members.clone());
-			
+
 			for member in members.clone().into_iter() {
 				TokenIdofMember::<T, I>::insert(member, token_id.clone());
 			}

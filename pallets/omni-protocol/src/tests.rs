@@ -132,7 +132,7 @@ fn it_works_for_verify_transaction() {
 		// Encode transaction
 		let data = encode_transaction(&secp, (secret_key, public_key), nonce, amount);
 
-		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME , &Vec::new(), &data);
+		let ret = OmniverseProtocol::verify_transaction(&PALLET_NAME, &Vec::new(), &data);
 		assert!(ret.is_ok());
 		assert_eq!(ret.unwrap(), VerifyResult::Success);
 	});

@@ -108,7 +108,8 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Convert X token to Y token
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		// #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(0)]
 		pub fn swap_x2y(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
@@ -138,7 +139,7 @@ pub mod pallet {
 
 			let key = (trading_pair.clone(), token_x_data.from);
 			if let Some((balance_x, mut balance_y)) = Balance::<T>::get(&key) {
-				balance_y = balance_y + tokens_bought;
+				balance_y += tokens_bought;
 				<Balance<T>>::insert(&key, (balance_x, balance_y));
 			} else {
 				<Balance<T>>::insert(&key, (0u128, tokens_bought));
@@ -154,7 +155,8 @@ pub mod pallet {
 		}
 
 		/// Convert Y token to X token
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		// #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(0)]
 		pub fn swap_y2x(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
@@ -184,7 +186,7 @@ pub mod pallet {
 
 			let key = (trading_pair.clone(), token_y_data.from);
 			if let Some((mut balance_x, balance_y)) = Balance::<T>::get(&key) {
-				balance_x = balance_x + tokens_bought;
+				balance_x += tokens_bought;
 				<Balance<T>>::insert(&key, (balance_x, balance_y));
 			} else {
 				<Balance<T>>::insert(&key, (tokens_bought, 0u128));
@@ -199,7 +201,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		// #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(0)]
 		pub fn add_liquidity(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
@@ -325,7 +328,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		// #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(0)]
 		pub fn remove_liquidity(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
@@ -356,8 +360,8 @@ pub mod pallet {
 			<TradingPairs<T>>::insert(&trading_pair, (reserve_x - amount_x, reserve_y - amount_y));
 			// MPC transfer X and Y token to sender
 			if let Some((mut balance_x, mut balance_y)) = Balance::<T>::get(&key) {
-				balance_x = balance_x + amount_x;
-				balance_y = balance_y + amount_y;
+				balance_x += amount_x;
+				balance_y += amount_y;
 				<Balance<T>>::insert(&key, (balance_x, balance_y));
 			} else {
 				<Balance<T>>::insert(&key, (amount_x, amount_y));
@@ -372,7 +376,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		// #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(0)]
 		pub fn transfer_x_token(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
@@ -405,7 +410,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		// #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1).ref_time())]
+		#[pallet::weight(0)]
 		pub fn transfer_y_token(
 			origin: OriginFor<T>,
 			trading_pair: Vec<u8>,
