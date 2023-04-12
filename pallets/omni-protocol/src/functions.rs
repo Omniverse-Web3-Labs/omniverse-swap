@@ -78,7 +78,7 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 					let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
 					let evil_tx = EvilTxData::new(omni_tx, nonce);
 					let mut er =
-						EvilRecorder::<T>::get(data.from).unwrap_or(Vec::<EvilTxData>::default());
+						EvilRecorder::<T>::get(data.from).unwrap_or_default();
 					er.push(evil_tx);
 					EvilRecorder::<T>::insert(data.from, er);
 					Ok(VerifyResult::Malicious)
