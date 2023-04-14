@@ -1,5 +1,7 @@
 # Omniverse DLT of Substrate
 
+![image](https://user-images.githubusercontent.com/83746881/232072082-a64c026c-4921-4f72-bc90-761ef0869c67.png)  
+
 The Omniverse DLT is a new application-level token protocol built over multiple public chains, enabling asset-related operations such as transfers and receptions running over different consensus spaces synchronously and equivalently.  
 
 This repository is an implementation template of Omniverse Protocol in form of pallets of Substrate.  
