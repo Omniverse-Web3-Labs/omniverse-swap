@@ -566,6 +566,11 @@ pub mod pallet {
 			pk: [u8; 64],
 			nonce: u128,
 		},
+
+		TransactionDuplicated {
+			pk: [u8; 64],
+			nonce: u128,
+		},
 	}
 
 	#[pallet::error]
