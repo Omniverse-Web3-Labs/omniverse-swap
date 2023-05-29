@@ -17,5 +17,4 @@ pub trait OmniverseAccounts {
 		token_id: Vec<u8>,
 		nonce: u128,
 	) -> Option<OmniverseTx>;
-	fn get_cooling_down_time() -> u64;
 }

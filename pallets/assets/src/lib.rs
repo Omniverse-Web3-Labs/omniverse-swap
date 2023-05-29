@@ -556,6 +556,10 @@ pub mod pallet {
 			token_id: Vec<u8>,
 			members: Vec<(u32, Vec<u8>)>,
 		},
+		CooldownTimeSet {
+			token_id: Vec<u8>,
+			cooldown_time: u64,
+		},
 		TransactionSent {
 			pk: [u8; 64],
 			token_id: Vec<u8>,
@@ -563,6 +567,11 @@ pub mod pallet {
 		},
 
 		TransactionExecuted {
+			pk: [u8; 64],
+			nonce: u128,
+		},
+
+		TransactionDuplicated {
 			pk: [u8; 64],
 			nonce: u128,
 		},
@@ -1493,6 +1502,7 @@ pub mod pallet {
 			owner_pk: [u8; 64],
 			token_id: Vec<u8>,
 			members: Option<Vec<(u32, Vec<u8>)>>,
+			cooldown_time: Option<u64>,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 
@@ -1505,7 +1515,13 @@ pub mod pallet {
 			// Update storage.
 			TokensInfo::<T, I>::insert(
 				&token_id,
-				OmniverseToken::new(owner.clone(), owner_pk, token_id.clone(), members.clone()),
+				OmniverseToken::new(
+					owner.clone(),
+					owner_pk,
+					token_id.clone(),
+					members.clone(),
+					cooldown_time,
+				),
 			);
 
 			if let Some(members) = members {
@@ -1579,9 +1595,11 @@ pub mod pallet {
 			)
 			.ok_or(Error::<T, I>::TxNotExisted)?;
 
+			let omniverse_token = TokensInfo::<T, I>::get(&delayed_tx.token_id.clone())
+				.ok_or(Error::<T, I>::Unknown)?;
 			let cur_st = T::Timestamp::now().as_secs();
 			ensure!(
-				cur_st > omni_tx.timestamp + T::OmniverseProtocol::get_cooling_down_time(),
+				cur_st > omni_tx.timestamp + omniverse_token.cooldown_time,
 				Error::<T, I>::NotExecutable
 			);
 
@@ -1618,6 +1636,29 @@ pub mod pallet {
 			TokensInfo::<T, I>::insert(&token_id, token);
 
 			Self::deposit_event(Event::MembersSet { token_id, members });
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn set_cooldown_time(
+			origin: OriginFor<T>,
+			token_id: Vec<u8>,
+			cooldown_time: u64,
+		) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			// Check if the token exists.
+			let mut token = TokensInfo::<T, I>::get(&token_id).ok_or(Error::<T, I>::Unknown)?;
+
+			ensure!(token.owner == sender, Error::<T, I>::NoPermission);
+
+			token.set_cooldown_time(cooldown_time);
+
+			// Update storage
+			TokensInfo::<T, I>::insert(&token_id, token);
+
+			Self::deposit_event(Event::CooldownTimeSet { token_id, cooldown_time });
 
 			Ok(())
 		}

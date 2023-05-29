@@ -292,6 +292,7 @@ pub struct OmniverseToken<AccountId> {
 	pub owner_pk: [u8; 64],
 	pub token_id: Vec<u8>,
 	pub members: Vec<(u32, Vec<u8>)>, // (chain_id, member_address)
+	pub cooldown_time: u64,
 }
 
 impl<AccountId> OmniverseToken<AccountId> {
@@ -300,12 +301,23 @@ impl<AccountId> OmniverseToken<AccountId> {
 		owner_pk: [u8; 64],
 		token_id: Vec<u8>,
 		members: Option<Vec<(u32, Vec<u8>)>>,
+		cooldown_time: Option<u64>,
 	) -> Self {
-		Self { owner, owner_pk, token_id, members: members.unwrap_or(Vec::<(u32, Vec<u8>)>::new()) }
+		Self {
+			owner,
+			owner_pk,
+			token_id,
+			members: members.unwrap_or(Vec::<(u32, Vec<u8>)>::new()),
+			cooldown_time: cooldown_time.unwrap_or(0),
+		}
 	}
 
 	pub fn add_members(&mut self, members: Vec<(u32, Vec<u8>)>) {
 		self.members = members;
+	}
+
+	pub fn set_cooldown_time(&mut self, cooldown_time: u64) {
+		self.cooldown_time = cooldown_time;
 	}
 
 	pub fn is_member(&self, member: &(u32, Vec<u8>)) -> bool {

@@ -905,7 +905,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		match ret {
 			Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
-			Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
+			Ok(VerifyResult::Duplicated) => {
+				Self::deposit_event(Event::TransactionDuplicated {
+					pk: data.from,
+					nonce: data.nonce,
+				});
+				return Ok(FactoryResult::ProtocolDuplicated);
+			},
 			Err(VerifyError::SignatureError) => {
 				return Err(Error::<T, I>::ProtocolSignatureError.into())
 			},
@@ -965,13 +971,11 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					DelayedTx::new(data.from, omniverse_token.token_id.clone(), data.nonce),
 				);
 				DelayedIndex::<T, I>::set((delayed_executing_index, delayed_index + 1));
-				if T::OmniverseProtocol::get_chain_id() == data.chain_id {
-					Self::deposit_event(Event::TransactionSent {
-						pk: data.from,
-						token_id: omniverse_token.token_id,
-						nonce: data.nonce,
-					});
-				}
+				Self::deposit_event(Event::TransactionSent {
+					pk: data.from,
+					token_id: omniverse_token.token_id,
+					nonce: data.nonce,
+				});
 			},
 		}
 

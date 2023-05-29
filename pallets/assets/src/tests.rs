@@ -238,7 +238,7 @@ fn set_metadata_should_work() {
 
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None));
+		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None, None));
 
 		// Cannot add metadata to unowned asset
 		assert_noop!(
@@ -323,7 +323,7 @@ fn force_metadata_should_work() {
 
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None));
+		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None, None));
 
 		assert_ok!(Assets::force_set_metadata(
 			RuntimeOrigin::root(),
@@ -491,7 +491,7 @@ fn it_works_for_create_token() {
 
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None));
+		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None, None));
 		assert!(Assets::tokens_info(vec![1]).is_some());
 	});
 }
@@ -506,9 +506,9 @@ fn it_fails_for_create_token_with_token_already_exist() {
 
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk.clone(), vec![1], None));
+		assert_ok!(Assets::create_token(RuntimeOrigin::signed(1), pk.clone(), vec![1], None, None));
 		assert_err!(
-			Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None),
+			Assets::create_token(RuntimeOrigin::signed(1), pk, vec![1], None, None),
 			Error::<Test>::InUse
 		);
 	});
@@ -607,7 +607,8 @@ fn it_fails_for_factory_handler_with_signature_error() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -654,7 +655,8 @@ fn it_fails_for_factory_handler_mint_with_signer_not_owner() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (secret_key_to, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -687,7 +689,8 @@ fn it_works_for_factory_handler_mint() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -730,7 +733,8 @@ fn it_fails_for_factory_handler_transfer_with_balance_overflow() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -773,7 +777,8 @@ fn it_works_for_factory_handler_transfer() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		// Mint token
