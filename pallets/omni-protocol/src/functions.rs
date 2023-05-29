@@ -136,6 +136,6 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 	}
 
 	fn get_cooling_down_time() -> u64 {
-		10
+		0
 	}
 }
