@@ -136,7 +136,7 @@ fn create_token_should_work() {
 
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Uniques::create_token(RuntimeOrigin::signed(1), pk, vec![1], None));
+		assert_ok!(Uniques::create_token(RuntimeOrigin::signed(1), pk, vec![1], None, None));
 		assert!(Uniques::tokens_info(vec![1]).is_some());
 	});
 }
@@ -151,9 +151,15 @@ fn create_token_with_token_already_exist_not_work() {
 
 		let account = get_account_id_from_pk(public_key.serialize().as_slice());
 		fund_account(account);
-		assert_ok!(Uniques::create_token(RuntimeOrigin::signed(1), pk.clone(), vec![1], None));
+		assert_ok!(Uniques::create_token(
+			RuntimeOrigin::signed(1),
+			pk.clone(),
+			vec![1],
+			None,
+			None
+		));
 		assert_err!(
-			Uniques::create_token(RuntimeOrigin::signed(1), pk, vec![1], None),
+			Uniques::create_token(RuntimeOrigin::signed(1), pk, vec![1], None, None),
 			Error::<Test>::InUse
 		);
 	});
@@ -206,7 +212,8 @@ fn mint_item_with_wrong_signature_not_work() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -253,7 +260,8 @@ fn not_owner_mint_item_with_not_work() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (secret_key_to, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -286,7 +294,8 @@ fn mint_item_should_work() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -329,7 +338,8 @@ fn not_item_owner_transfer_should_not_work() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		let (_, public_key_to) = secp.generate_keypair(&mut OsRng);
@@ -375,7 +385,8 @@ fn transfer_item_should_work() {
 			RuntimeOrigin::signed(1),
 			pk,
 			TOKEN_ID,
-			Some(Vec::<(u32, Vec<u8>)>::new())
+			Some(Vec::<(u32, Vec<u8>)>::new()),
+			None
 		));
 
 		// Mint token

@@ -910,7 +910,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 					pk: data.from,
 					nonce: data.nonce,
 				});
-				return Ok(FactoryResult::ProtocolDuplicated)
+				return Ok(FactoryResult::ProtocolDuplicated);
 			},
 			Err(VerifyError::SignatureError) => {
 				return Err(Error::<T, I>::ProtocolSignatureError.into())

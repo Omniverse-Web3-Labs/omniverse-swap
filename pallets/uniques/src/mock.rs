@@ -192,8 +192,4 @@ impl OmniverseAccounts for OmniverseProtocol {
 	) -> Option<OmniverseTx> {
 		unsafe { TRANSACTION_DATA.clone() }
 	}
-
-	fn get_cooling_down_time() -> u64 {
-		5
-	}
 }

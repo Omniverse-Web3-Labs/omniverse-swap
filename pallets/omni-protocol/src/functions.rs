@@ -134,8 +134,4 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 	) -> Option<OmniverseTx> {
 		TransactionRecorder::<T>::get((pk, pallet_name, token_id, nonce))
 	}
-
-	fn get_cooling_down_time() -> u64 {
-		0
-	}
 }
