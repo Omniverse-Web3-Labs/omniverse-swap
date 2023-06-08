@@ -106,8 +106,8 @@ impl OmniverseProtocol {
 
 impl OmniverseAccounts for OmniverseProtocol {
 	fn verify_transaction(
-		_pallet_name: &Vec<u8>,
-		_token_id: &Vec<u8>,
+		_pallet_name: &[u8],
+		_token_id: &[u8],
 		data: &OmniverseTransactionData,
 		_with_ethereum: bool,
 	) -> Result<VerifyResult, VerifyError> {

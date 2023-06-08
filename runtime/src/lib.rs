@@ -29,7 +29,8 @@ use sp_version::RuntimeVersion;
 pub use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{
-		AsEnsureOriginWithArg, ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem, Randomness, StorageInfo,
+		AsEnsureOriginWithArg, ConstU128, ConstU32, ConstU64, ConstU8, KeyOwnerProofSystem,
+		Randomness, StorageInfo,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -281,7 +282,7 @@ parameter_types! {
 	pub const MetadataDepositPerByte: Balance = UNITS;
 
 	pub const CollectionDeposit: Balance = 100 * UNITS;
-	pub const ItemDeposit: Balance = 1 * UNITS;
+	pub const ItemDeposit: Balance = UNITS;
 	pub const AttributeDepositBase: Balance = UNITS;
 	pub const KeyLimit: u32 = 32;
 	pub const ValueLimit: u32 = 256;
@@ -373,6 +374,7 @@ impl pallet_omniverse_protocol::Config for Runtime {
 impl pallet_omniverse_swap::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type OmniverseToken = Assets;
+	type OmniverseProtocol = OmniverseProtocol;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

@@ -1525,7 +1525,7 @@ pub mod pallet {
 			);
 
 			if let Some(members) = members {
-				for member in members.clone().into_iter() {
+				for member in members.into_iter() {
 					TokenIdofMember::<T, I>::insert(member, token_id.clone());
 				}
 			}
@@ -1541,8 +1541,8 @@ pub mod pallet {
 				id.saturating_inc();
 			}
 
-			AssetId2TokenId::<T, I>::insert(&id, token_id.clone());
-			TokenId2AssetId::<T, I>::insert(&token_id, id.clone());
+			AssetId2TokenId::<T, I>::insert(id, token_id.clone());
+			TokenId2AssetId::<T, I>::insert(&token_id, id);
 
 			Asset::<T, I>::insert(
 				id,
@@ -1595,11 +1595,11 @@ pub mod pallet {
 			)
 			.ok_or(Error::<T, I>::TxNotExisted)?;
 
-			let omniverse_token = TokensInfo::<T, I>::get(&delayed_tx.token_id.clone())
-				.ok_or(Error::<T, I>::Unknown)?;
+			let omniverse_token =
+				TokensInfo::<T, I>::get(&delayed_tx.token_id).ok_or(Error::<T, I>::Unknown)?;
 			let cur_st = T::Timestamp::now().as_secs();
 			ensure!(
-				cur_st > omni_tx.timestamp + omniverse_token.cooldown_time,
+				cur_st >= omni_tx.timestamp + omniverse_token.cooldown_time,
 				Error::<T, I>::NotExecutable
 			);
 
