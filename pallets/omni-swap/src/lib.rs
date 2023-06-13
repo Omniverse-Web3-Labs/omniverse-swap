@@ -70,14 +70,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn deposit_record)]
-	pub type DepositRecords<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		[u8; 64],
-		Blake2_128Concat,
-		(Vec<u8>, u128),
-		OmniverseTransactionData,
-	>;
+	pub type DepositRecords<T: Config> =
+		StorageMap<_, Blake2_128Concat, ([u8; 64], Vec<u8>, u128), OmniverseTransactionData>;
 
 	/// key: pk and token_id
 	/// value: balance
@@ -90,8 +84,7 @@ pub mod pallet {
 	/// value: withdraw amount
 	#[pallet::storage]
 	#[pallet::getter(fn withdrawals)]
-	pub type Withdrawals<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, [u8; 64], Blake2_128Concat, Vec<u8>, u128>;
+	pub type Withdrawals<T: Config> = StorageMap<_, Blake2_128Concat, ([u8; 64], Vec<u8>), u128>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn mpc)]
@@ -132,8 +125,7 @@ pub mod pallet {
 		GetAddress0Failed,
 		InsufficientLiquidity,
 		InsufficientAmount,
-		OmniverseTransferXFailed,
-		OmniverseTransferYFailed,
+		OmniverseTransferFailed,
 		TokenIdNotExist,
 		MismatchTokenId,
 		InsufficientBalance,
@@ -148,6 +140,7 @@ pub mod pallet {
 		TxNotExisted,
 		/// Deposit tx mismatch record tx
 		OmniverseTxMismatch,
+		OmniverseTxNotExecuted,
 		BalanceNotEnough,
 
 		/// Check permission
@@ -191,13 +184,13 @@ pub mod pallet {
 			ensure!(to == mpc, Error::<T>::InvalidValue);
 			T::OmniverseToken::send_transaction_external(token_id.clone(), &data)
 				.ok()
-				.ok_or(Error::<T>::OmniverseTransferXFailed)?;
+				.ok_or(Error::<T>::OmniverseTransferFailed)?;
 			// let omni_tx = OmniverseTx::new(data.clone(), T::Timestamp::now().as_secs());
 			ensure!(
-				!DepositRecords::<T>::contains_key(data.from, &(token_id.clone(), data.nonce)),
+				!DepositRecords::<T>::contains_key(&(data.from, token_id.clone(), data.nonce)),
 				Error::<T>::DepositExist
 			);
-			DepositRecords::<T>::insert(data.from, &(token_id.clone(), data.nonce), data.clone());
+			DepositRecords::<T>::insert(&(data.from, token_id.clone(), data.nonce), data.clone());
 			Self::deposit_event(Event::PendingDeposit(data.from, token_id, data.nonce));
 			Ok(())
 		}
@@ -216,7 +209,7 @@ pub mod pallet {
 
 			let balance = Balance::<T>::get(pk, &token_id).unwrap_or(0);
 			ensure!(amount > 0 && balance >= amount, Error::<T>::InvalidValue);
-			Withdrawals::<T>::insert(pk, &token_id, amount);
+			Withdrawals::<T>::insert((pk, token_id.clone()), amount);
 			Balance::<T>::insert(pk, &token_id, balance - amount);
 
 			Self::deposit_event(Event::Withdrawal(pk, token_id, amount));
@@ -233,7 +226,7 @@ pub mod pallet {
 			nonce: u128,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
-			let data = DepositRecords::<T>::get(pk, &(token_id.clone(), nonce))
+			let data = DepositRecords::<T>::get(&(pk, token_id.clone(), nonce))
 				.ok_or(Error::<T>::NotDeposit)?;
 			let omni_tx = T::OmniverseProtocol::get_transaction_data(
 				pk,
@@ -244,8 +237,9 @@ pub mod pallet {
 			.ok_or(Error::<T>::TxNotExisted)?;
 
 			ensure!(data == omni_tx.tx_data, Error::<T>::OmniverseTxMismatch);
+			ensure!(omni_tx.executed, Error::<T>::OmniverseTxNotExecuted);
 
-			DepositRecords::<T>::remove(pk, &(token_id.clone(), nonce));
+			DepositRecords::<T>::remove(&(pk, token_id.clone(), nonce));
 			// let balance
 			let mut balance = Balance::<T>::get(pk, &token_id).unwrap_or(0);
 			let fungible = Fungible::decode(&mut data.payload.as_slice())
@@ -264,8 +258,8 @@ pub mod pallet {
 			data: OmniverseTransactionData,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
-			let withdrawal =
-				Withdrawals::<T>::get(pk, &token_id).ok_or(Error::<T>::WithdrawalNotExist)?;
+			let withdrawal = Withdrawals::<T>::get((pk, token_id.clone()))
+				.ok_or(Error::<T>::WithdrawalNotExist)?;
 			let fungible = Fungible::decode(&mut data.payload.as_slice())
 				.map_err(|_| Error::<T>::DecodePayloadFailed)?;
 			ensure!(withdrawal == fungible.amount, Error::<T>::WithdrawAmountMismatch);
@@ -273,10 +267,10 @@ pub mod pallet {
 				fungible.ex_data.try_into().map_err(|_| Error::<T>::SerializePublicKeyFailed)?;
 			ensure!(pk == dest_pk, Error::<T>::ToAccountMismatch);
 
-			Withdrawals::<T>::remove(pk, &token_id);
+			Withdrawals::<T>::remove((pk, token_id.clone()));
 			T::OmniverseToken::send_transaction_external(token_id, &data)
 				.ok()
-				.ok_or(Error::<T>::OmniverseTransferYFailed)?;
+				.ok_or(Error::<T>::OmniverseTransferFailed)?;
 			Ok(())
 		}
 
