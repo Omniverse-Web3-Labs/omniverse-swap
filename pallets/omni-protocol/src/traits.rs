@@ -17,4 +17,10 @@ pub trait OmniverseAccounts {
 		token_id: Vec<u8>,
 		nonce: u128,
 	) -> Option<OmniverseTx>;
+	fn execute(
+		pk: [u8; 64],
+		pallet_name: Vec<u8>,
+		token_id: Vec<u8>,
+		nonce: u128,
+	);
 }

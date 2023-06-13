@@ -1482,7 +1482,7 @@ pub mod pallet {
 					},
 					_ => {
 						T::Currency::reserve(&collection_details.owner, deposit - old_deposit)?;
-					}
+					},
 				}
 				// if deposit > old_deposit {
 				// 	T::Currency::reserve(&collection_details.owner, deposit - old_deposit)?;

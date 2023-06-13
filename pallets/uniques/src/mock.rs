@@ -192,4 +192,11 @@ impl OmniverseAccounts for OmniverseProtocol {
 	) -> Option<OmniverseTx> {
 		unsafe { TRANSACTION_DATA.clone() }
 	}
+	
+	fn execute(
+		_pk: [u8; 64],
+		_pallet_name: Vec<u8>,
+		_token_id: Vec<u8>,
+		_nonce: u128,
+	) {}
 }

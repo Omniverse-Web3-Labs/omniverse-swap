@@ -569,6 +569,7 @@ pub mod pallet {
 		TransactionExecuted {
 			pk: [u8; 64],
 			nonce: u128,
+			token_id: Vec<u8>,
 		},
 
 		TransactionDuplicated {
@@ -1594,7 +1595,6 @@ pub mod pallet {
 				delayed_tx.nonce,
 			)
 			.ok_or(Error::<T, I>::TxNotExisted)?;
-
 			let omniverse_token =
 				TokensInfo::<T, I>::get(&delayed_tx.token_id).ok_or(Error::<T, I>::Unknown)?;
 			let cur_st = T::Timestamp::now().as_secs();
@@ -1606,9 +1606,16 @@ pub mod pallet {
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
 			Self::execute_transaction(&delayed_tx.token_id, &omni_tx.tx_data)?;
+			T::OmniverseProtocol::execute(
+				delayed_tx.sender,
+				PALLET_NAME.to_vec(),
+				delayed_tx.token_id.clone(),
+				delayed_tx.nonce,
+			);
 			Self::deposit_event(Event::TransactionExecuted {
 				pk: delayed_tx.sender,
 				nonce: delayed_tx.nonce,
+				token_id: delayed_tx.token_id,
 			});
 
 			Ok(())

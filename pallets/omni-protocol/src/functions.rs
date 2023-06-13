@@ -136,4 +136,13 @@ impl<T: Config> OmniverseAccounts for Pallet<T> {
 	) -> Option<OmniverseTx> {
 		TransactionRecorder::<T>::get((pk, pallet_name, token_id, nonce))
 	}
+
+	fn execute(pk: [u8; 64], pallet_name: Vec<u8>, token_id: Vec<u8>, nonce: u128) {
+		if let Some(mut omni_tx) =
+			TransactionRecorder::<T>::get((pk, pallet_name.clone(), token_id.clone(), nonce))
+		{
+			omni_tx.executed = true;
+			TransactionRecorder::<T>::insert((pk, pallet_name, token_id, nonce), omni_tx);
+		}
+	}
 }
