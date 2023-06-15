@@ -511,6 +511,13 @@ pub mod pallet {
 		TransactionExecuted {
 			pk: [u8; 64],
 			nonce: u128,
+			token_id: Vec<u8>,
+		},
+
+		TransactionDuplicated {
+			pk: [u8; 64],
+			nonce: u128,
+			token_id: Vec<u8>,
 		},
 
 		// set omniverse members
@@ -1808,7 +1815,7 @@ pub mod pallet {
 			let token = TokensInfo::<T, I>::get(&delayed_tx.token_id)
 				.ok_or(Error::<T, I>::UnknownCollection)?;
 			let cur_st = T::Timestamp::now().as_secs();
-			ensure!(cur_st > omni_tx.timestamp + token.cooldown_time, Error::<T, I>::NotExecutable);
+			ensure!(cur_st >= omni_tx.timestamp + token.cooldown_time, Error::<T, I>::NotExecutable);
 
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
@@ -1816,6 +1823,7 @@ pub mod pallet {
 			Self::deposit_event(Event::TransactionExecuted {
 				pk: delayed_tx.sender,
 				nonce: delayed_tx.nonce,
+				token_id: delayed_tx.token_id,
 			});
 
 			Ok(())

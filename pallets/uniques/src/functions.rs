@@ -397,7 +397,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
 		match ret {
 			Ok(VerifyResult::Malicious) => return Ok(FactoryResult::ProtocolMalicious),
-			Ok(VerifyResult::Duplicated) => return Ok(FactoryResult::ProtocolDuplicated),
+			Ok(VerifyResult::Duplicated) => return {
+				Self::deposit_event(Event::TransactionDuplicated {
+					pk: data.from,
+					nonce: data.nonce,
+					token_id: omniverse_token.token_id,
+				});
+				Ok(FactoryResult::ProtocolDuplicated)
+			},
 			Err(VerifyError::SignatureError) => {
 				return Err(Error::<T, I>::ProtocolSignatureError.into())
 			},
