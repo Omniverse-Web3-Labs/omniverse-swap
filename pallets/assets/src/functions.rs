@@ -909,6 +909,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 				Self::deposit_event(Event::TransactionDuplicated {
 					pk: data.from,
 					nonce: data.nonce,
+					token_id: omniverse_token.token_id,
 				});
 				return Ok(FactoryResult::ProtocolDuplicated);
 			},

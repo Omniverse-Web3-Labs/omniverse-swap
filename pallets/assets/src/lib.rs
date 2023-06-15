@@ -575,6 +575,7 @@ pub mod pallet {
 		TransactionDuplicated {
 			pk: [u8; 64],
 			nonce: u128,
+			token_id: Vec<u8>,
 		},
 	}
 
