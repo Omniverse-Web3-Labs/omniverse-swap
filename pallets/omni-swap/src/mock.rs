@@ -206,13 +206,15 @@ impl OmniverseAccounts for OmniverseProtocol {
 	) -> Option<OmniverseTx> {
 		unsafe { TRANSACTION_DATA.clone() }
 	}
-	
-	fn execute(
-		_pk: [u8; 64],
-		_pallet_name: Vec<u8>,
-		_token_id: Vec<u8>,
-		_nonce: u128,
-	) {}
+
+	fn execute(_pk: [u8; 64], _pallet_name: Vec<u8>, _token_id: Vec<u8>, _nonce: u128) {
+		unsafe {
+			match TRANSACTION_DATA.as_mut() {
+				Some(tx_data) => tx_data.executed = true,
+				None => {},
+			}
+		}
+	}
 }
 
 pub(crate) fn take_hooks() -> Vec<Hook> {
