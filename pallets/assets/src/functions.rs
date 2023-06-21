@@ -955,7 +955,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 						let details = Asset::<T, I>::get(id).ok_or(Error::<T, I>::Unknown)?;
 						ensure!(source == details.issuer, Error::<T, I>::NoPermission);
 						// Account::<T, I>::get(&id, source).
-						Account::<T, I>::get(id, source).ok_or(Error::<T, I>::NoAccount)?;
+						Account::<T, I>::get(id, dest).ok_or(Error::<T, I>::NoAccount)?;
 						debug_assert!(details.supply >= actual, "checked in prep; qed");
 					} else {
 						return Err(Error::<T, I>::UnknownProtocolType.into());
