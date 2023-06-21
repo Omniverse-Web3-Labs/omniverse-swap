@@ -1022,7 +1022,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 			}
 			let f = DebitFlags { keep_alive: false, best_effort: true };
 			// let _ = Self::do_burn(id, &who, amount, Some(origin), f)?;
-			let _ = Self::do_burn(id, &origin, amount, None, f)?;
+			let _ = Self::do_burn(id, &dest, amount, None, f)?;
 			Self::omniverse_burn(omniverse_token, dest_pk, fungible.amount);
 		}
 
