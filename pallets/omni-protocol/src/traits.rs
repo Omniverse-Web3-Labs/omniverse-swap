@@ -3,8 +3,8 @@ use sp_std::vec::Vec;
 
 pub trait OmniverseAccounts {
 	fn verify_transaction(
-		pallet_name: &Vec<u8>,
-		token_id: &Vec<u8>,
+		pallet_name: &[u8],
+		token_id: &[u8],
 		data: &OmniverseTransactionData,
 		with_ethereum: bool,
 	) -> Result<VerifyResult, VerifyError>;
@@ -17,4 +17,10 @@ pub trait OmniverseAccounts {
 		token_id: Vec<u8>,
 		nonce: u128,
 	) -> Option<OmniverseTx>;
+	fn execute(
+		pk: [u8; 64],
+		pallet_name: Vec<u8>,
+		token_id: Vec<u8>,
+		nonce: u128,
+	);
 }

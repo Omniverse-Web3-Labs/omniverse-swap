@@ -569,11 +569,13 @@ pub mod pallet {
 		TransactionExecuted {
 			pk: [u8; 64],
 			nonce: u128,
+			token_id: Vec<u8>,
 		},
 
 		TransactionDuplicated {
 			pk: [u8; 64],
 			nonce: u128,
+			token_id: Vec<u8>,
 		},
 	}
 
@@ -1525,7 +1527,7 @@ pub mod pallet {
 			);
 
 			if let Some(members) = members {
-				for member in members.clone().into_iter() {
+				for member in members.into_iter() {
 					TokenIdofMember::<T, I>::insert(member, token_id.clone());
 				}
 			}
@@ -1541,8 +1543,8 @@ pub mod pallet {
 				id.saturating_inc();
 			}
 
-			AssetId2TokenId::<T, I>::insert(&id, token_id.clone());
-			TokenId2AssetId::<T, I>::insert(&token_id, id.clone());
+			AssetId2TokenId::<T, I>::insert(id, token_id.clone());
+			TokenId2AssetId::<T, I>::insert(&token_id, id);
 
 			Asset::<T, I>::insert(
 				id,
@@ -1594,21 +1596,27 @@ pub mod pallet {
 				delayed_tx.nonce,
 			)
 			.ok_or(Error::<T, I>::TxNotExisted)?;
-
-			let omniverse_token = TokensInfo::<T, I>::get(&delayed_tx.token_id.clone())
-				.ok_or(Error::<T, I>::Unknown)?;
+			let omniverse_token =
+				TokensInfo::<T, I>::get(&delayed_tx.token_id).ok_or(Error::<T, I>::Unknown)?;
 			let cur_st = T::Timestamp::now().as_secs();
 			ensure!(
-				cur_st > omni_tx.timestamp + omniverse_token.cooldown_time,
+				cur_st >= omni_tx.timestamp + omniverse_token.cooldown_time,
 				Error::<T, I>::NotExecutable
 			);
 
 			DelayedIndex::<T, I>::set((delayed_executing_index + 1, delayed_index));
 
 			Self::execute_transaction(&delayed_tx.token_id, &omni_tx.tx_data)?;
+			T::OmniverseProtocol::execute(
+				delayed_tx.sender,
+				PALLET_NAME.to_vec(),
+				delayed_tx.token_id.clone(),
+				delayed_tx.nonce,
+			);
 			Self::deposit_event(Event::TransactionExecuted {
 				pk: delayed_tx.sender,
 				nonce: delayed_tx.nonce,
+				token_id: delayed_tx.token_id,
 			});
 
 			Ok(())

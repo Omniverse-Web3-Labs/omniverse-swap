@@ -124,11 +124,12 @@ impl OmniverseTransactionData {
 pub struct OmniverseTx {
 	pub tx_data: OmniverseTransactionData,
 	pub timestamp: u64,
+	pub executed: bool,
 }
 
 impl OmniverseTx {
 	pub fn new(data: OmniverseTransactionData, timestamp: u64) -> Self {
-		Self { tx_data: data, timestamp }
+		Self { tx_data: data, timestamp, executed: false }
 	}
 }
 
